@@ -1,0 +1,482 @@
+// CubeRenderer.js - 3D Cube with Correct Paint Validation
+
+export class CubeRenderer {
+    constructor(containerId) {
+        this.container = document.getElementById(containerId);
+        this.scene = null;
+        this.camera = null;
+        this.renderer = null;
+        this.controls = null;
+        this.cubeGroup = null;
+        this.cubies = [];
+        this.isAnimating = false;
+        this.animationQueue = [];
+        this.paintMode = false;
+        this.selectedColor = 'W';
+        this.raycaster = new THREE.Raycaster();
+        this.mouse = new THREE.Vector2();
+        this.onPaintCallback = null;
+
+        // Color mapping
+        this.colors = {
+            'W': 0xf5f0e8,
+            'Y': 0xf0c75e,
+            'R': 0xc94a4a,
+            'O': 0xd97b3d,
+            'B': 0x4a7dc9,
+            'G': 0x4aab6b,
+            'X': 0x1f1d1b,
+            'U': 0x0a0a0a
+        };
+
+        // Face normals
+        this.faceNormals = {
+            'U': new THREE.Vector3(0, 1, 0),
+            'D': new THREE.Vector3(0, -1, 0),
+            'R': new THREE.Vector3(1, 0, 0),
+            'L': new THREE.Vector3(-1, 0, 0),
+            'F': new THREE.Vector3(0, 0, 1),
+            'B': new THREE.Vector3(0, 0, -1)
+        };
+
+        // Paint state
+        this.paintState = null;
+
+        this.init();
+    }
+
+    init() {
+        const width = this.container.clientWidth;
+        const height = this.container.clientHeight;
+
+        this.scene = new THREE.Scene();
+        this.camera = new THREE.PerspectiveCamera(45, width / height, 0.1, 1000);
+        this.camera.position.set(5, 4, 6);
+        this.camera.lookAt(0, 0, 0);
+
+        this.renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+        this.renderer.setSize(width, height);
+        this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+        this.renderer.setClearColor(0x000000, 0);
+        this.container.appendChild(this.renderer.domElement);
+
+        this.controls = new THREE.OrbitControls(this.camera, this.renderer.domElement);
+        this.controls.enableDamping = true;
+        this.controls.dampingFactor = 0.08;
+        this.controls.minDistance = 5;
+        this.controls.maxDistance = 12;
+        this.controls.enablePan = false;
+        this.controls.rotateSpeed = 0.8;
+
+        const ambientLight = new THREE.AmbientLight(0xffffff, 0.5);
+        this.scene.add(ambientLight);
+
+        const directionalLight = new THREE.DirectionalLight(0xffffff, 0.8);
+        directionalLight.position.set(5, 10, 7);
+        this.scene.add(directionalLight);
+
+        const backLight = new THREE.DirectionalLight(0xffffff, 0.3);
+        backLight.position.set(-5, -5, -5);
+        this.scene.add(backLight);
+
+        this.buildCube();
+        window.addEventListener('resize', () => this.onResize());
+        this.renderer.domElement.addEventListener('click', (e) => this.onClick(e));
+        this.renderer.domElement.addEventListener('touchend', (e) => this.onTouch(e));
+        this.animate();
+    }
+
+    buildCube(unpainted = false) {
+        if (this.cubeGroup) {
+            this.scene.remove(this.cubeGroup);
+        }
+
+        this.cubeGroup = new THREE.Group();
+        this.cubies = [];
+
+        const cubieSize = 0.92;
+        const gap = 1.0;
+
+        // Initialize paint state - completely blank when unpainted
+        if (unpainted) {
+            this.paintState = {
+                U: ['U', 'U', 'U', 'U', 'U', 'U', 'U', 'U', 'U'],
+                D: ['U', 'U', 'U', 'U', 'U', 'U', 'U', 'U', 'U'],
+                F: ['U', 'U', 'U', 'U', 'U', 'U', 'U', 'U', 'U'],
+                B: ['U', 'U', 'U', 'U', 'U', 'U', 'U', 'U', 'U'],
+                L: ['U', 'U', 'U', 'U', 'U', 'U', 'U', 'U', 'U'],
+                R: ['U', 'U', 'U', 'U', 'U', 'U', 'U', 'U', 'U']
+            };
+        } else {
+            this.paintState = {
+                U: ['W', 'W', 'W', 'W', 'W', 'W', 'W', 'W', 'W'],
+                D: ['Y', 'Y', 'Y', 'Y', 'Y', 'Y', 'Y', 'Y', 'Y'],
+                F: ['G', 'G', 'G', 'G', 'G', 'G', 'G', 'G', 'G'],
+                B: ['B', 'B', 'B', 'B', 'B', 'B', 'B', 'B', 'B'],
+                L: ['O', 'O', 'O', 'O', 'O', 'O', 'O', 'O', 'O'],
+                R: ['R', 'R', 'R', 'R', 'R', 'R', 'R', 'R', 'R']
+            };
+        }
+
+        for (let x = -1; x <= 1; x++) {
+            for (let y = -1; y <= 1; y++) {
+                for (let z = -1; z <= 1; z++) {
+                    const cubie = this.createCubie(x, y, z, cubieSize, unpainted);
+                    cubie.position.set(x * gap, y * gap, z * gap);
+                    cubie.userData = { x, y, z };
+                    this.cubeGroup.add(cubie);
+                    this.cubies.push(cubie);
+                }
+            }
+        }
+
+        this.scene.add(this.cubeGroup);
+    }
+
+    createCubie(x, y, z, size, unpainted = false) {
+        const geometry = new THREE.BoxGeometry(size, size, size);
+
+        const getColor = (face, isExternal) => {
+            if (!isExternal) return this.colors['X'];
+            if (unpainted) {
+                return this.colors['U'];
+            }
+            // Solved state colors
+            if (face === 'R') return this.colors['R'];
+            if (face === 'L') return this.colors['O'];
+            if (face === 'U') return this.colors['W'];
+            if (face === 'D') return this.colors['Y'];
+            if (face === 'F') return this.colors['G'];
+            if (face === 'B') return this.colors['B'];
+            return this.colors['X'];
+        };
+
+        const materials = [
+            new THREE.MeshStandardMaterial({ color: getColor('R', x === 1), roughness: 0.3, metalness: 0.1 }),
+            new THREE.MeshStandardMaterial({ color: getColor('L', x === -1), roughness: 0.3, metalness: 0.1 }),
+            new THREE.MeshStandardMaterial({ color: getColor('U', y === 1), roughness: 0.3, metalness: 0.1 }),
+            new THREE.MeshStandardMaterial({ color: getColor('D', y === -1), roughness: 0.3, metalness: 0.1 }),
+            new THREE.MeshStandardMaterial({ color: getColor('F', z === 1), roughness: 0.3, metalness: 0.1 }),
+            new THREE.MeshStandardMaterial({ color: getColor('B', z === -1), roughness: 0.3, metalness: 0.1 })
+        ];
+
+        return new THREE.Mesh(geometry, materials);
+    }
+
+    enablePaintMode(color = 'W', callback = null) {
+        this.paintMode = true;
+        this.selectedColor = color;
+        this.onPaintCallback = callback;
+        this.container.style.cursor = 'crosshair';
+    }
+
+    disablePaintMode() {
+        this.paintMode = false;
+        this.container.style.cursor = 'grab';
+    }
+
+    setSelectedColor(color) {
+        this.selectedColor = color;
+    }
+
+    onClick(event) {
+        if (!this.paintMode) return;
+
+        const rect = this.renderer.domElement.getBoundingClientRect();
+        this.mouse.x = ((event.clientX - rect.left) / rect.width) * 2 - 1;
+        this.mouse.y = -((event.clientY - rect.top) / rect.height) * 2 + 1;
+
+        this.handlePaint();
+    }
+
+    onTouch(event) {
+        if (!this.paintMode || !event.changedTouches[0]) return;
+
+        event.preventDefault();
+        const touch = event.changedTouches[0];
+        const rect = this.renderer.domElement.getBoundingClientRect();
+        this.mouse.x = ((touch.clientX - rect.left) / rect.width) * 2 - 1;
+        this.mouse.y = -((touch.clientY - rect.top) / rect.height) * 2 + 1;
+
+        this.handlePaint();
+    }
+
+    handlePaint() {
+        this.raycaster.setFromCamera(this.mouse, this.camera);
+        const intersects = this.raycaster.intersectObjects(this.cubies);
+
+        if (intersects.length > 0) {
+            const intersect = intersects[0];
+            const cubie = intersect.object;
+            const faceIndex = intersect.faceIndex;
+            const materialIndex = Math.floor(faceIndex / 2);
+
+            const { faceName, stickerIndex } = this.getFaceAndIndex(cubie, materialIndex);
+
+            if (faceName && stickerIndex !== -1) {
+                // Validate paint
+                const validation = this.validatePaint(cubie, materialIndex, this.selectedColor);
+
+                if (!validation.valid) {
+                    if (this.onPaintCallback) {
+                        this.onPaintCallback(faceName, stickerIndex, null, validation.reason);
+                    }
+                    return;
+                }
+
+                // Apply paint
+                this.paintState[faceName][stickerIndex] = this.selectedColor;
+                cubie.material[materialIndex].color.setHex(this.colors[this.selectedColor]);
+
+                if (this.onPaintCallback) {
+                    this.onPaintCallback(faceName, stickerIndex, this.selectedColor, null);
+                }
+            }
+        }
+    }
+
+    // Validate using the actual cubie - check all visible faces of the same cubie
+    validatePaint(cubie, paintingMaterialIndex, color) {
+        const { x, y, z } = cubie.userData;
+
+        // Rule 1: Max 9 of each color
+        const counts = this.getColorCounts();
+
+        // Get current color at the position we're painting
+        const { faceName: currentFace, stickerIndex: currentIdx } = this.getFaceAndIndex(cubie, paintingMaterialIndex);
+        const currentColor = this.paintState[currentFace][currentIdx];
+
+        // If replacing same color, allow
+        if (currentColor === color) {
+            return { valid: true };
+        }
+
+        // If adding new color, check if already at 9
+        if (currentColor !== color && counts[color] >= 9) {
+            return { valid: false, reason: `Already have 9 ${this.getColorName(color)} stickers!` };
+        }
+
+        // Rule 3: Centers must be unique colors
+        if (currentIdx === 4) { // Center piece
+            for (const [fName, faceColors] of Object.entries(this.paintState)) {
+                if (fName === currentFace) continue;
+                if (faceColors[4] === color) {
+                    return { valid: false, reason: `Center ${this.getColorName(color)} is already used on ${fName} face!` };
+                }
+            }
+        }
+
+
+        // Rule 2: Same cubie can't have same color on different visible faces
+        // Check all 6 material indices for this cubie
+        const visibleFaces = [];
+
+        // Material 0 = +X (R face) - visible if x === 1
+        if (x === 1) visibleFaces.push({ matIdx: 0, face: 'R' });
+        // Material 1 = -X (L face) - visible if x === -1
+        if (x === -1) visibleFaces.push({ matIdx: 1, face: 'L' });
+        // Material 2 = +Y (U face) - visible if y === 1
+        if (y === 1) visibleFaces.push({ matIdx: 2, face: 'U' });
+        // Material 3 = -Y (D face) - visible if y === -1
+        if (y === -1) visibleFaces.push({ matIdx: 3, face: 'D' });
+        // Material 4 = +Z (F face) - visible if z === 1
+        if (z === 1) visibleFaces.push({ matIdx: 4, face: 'F' });
+        // Material 5 = -Z (B face) - visible if z === -1
+        if (z === -1) visibleFaces.push({ matIdx: 5, face: 'B' });
+
+        // Check other faces of this cubie for same color
+        for (const { matIdx, face } of visibleFaces) {
+            if (matIdx === paintingMaterialIndex) continue; // Skip the face we're painting
+
+            const { stickerIndex } = this.getFaceAndIndex(cubie, matIdx);
+            if (stickerIndex !== -1) {
+                const existingColor = this.paintState[face][stickerIndex];
+                if (existingColor === color) {
+                    return { valid: false, reason: `This piece already has ${this.getColorName(color)} on another face!` };
+                }
+            }
+        }
+
+        return { valid: true };
+    }
+
+    getColorCounts() {
+        const counts = { W: 0, Y: 0, R: 0, O: 0, B: 0, G: 0 };
+        Object.values(this.paintState).forEach(face => {
+            face.forEach(color => {
+                if (counts.hasOwnProperty(color)) {
+                    counts[color]++;
+                }
+            });
+        });
+        return counts;
+    }
+
+    getColorName(code) {
+        const names = { W: 'White', Y: 'Yellow', R: 'Red', O: 'Orange', B: 'Blue', G: 'Green' };
+        return names[code] || code;
+    }
+
+    getFaceAndIndex(cubie, materialIndex) {
+        const { x, y, z } = cubie.userData;
+        let faceName = null;
+        let row, col;
+
+        switch (materialIndex) {
+            case 0: // Right (+X)
+                if (x !== 1) return { faceName: null, stickerIndex: -1 };
+                faceName = 'R';
+                row = 1 - y;
+                col = 1 - z;
+                break;
+            case 1: // Left (-X)
+                if (x !== -1) return { faceName: null, stickerIndex: -1 };
+                faceName = 'L';
+                row = 1 - y;
+                col = z + 1;
+                break;
+            case 2: // Up (+Y)
+                if (y !== 1) return { faceName: null, stickerIndex: -1 };
+                faceName = 'U';
+                row = 1 - z;
+                col = x + 1;
+                break;
+            case 3: // Down (-Y)
+                if (y !== -1) return { faceName: null, stickerIndex: -1 };
+                faceName = 'D';
+                row = z + 1;
+                col = x + 1;
+                break;
+            case 4: // Front (+Z)
+                if (z !== 1) return { faceName: null, stickerIndex: -1 };
+                faceName = 'F';
+                row = 1 - y;
+                col = x + 1;
+                break;
+            case 5: // Back (-Z)
+                if (z !== -1) return { faceName: null, stickerIndex: -1 };
+                faceName = 'B';
+                row = 1 - y;
+                col = 1 - x;
+                break;
+        }
+
+        if (faceName) {
+            return { faceName, stickerIndex: row * 3 + col };
+        }
+        return { faceName: null, stickerIndex: -1 };
+    }
+
+    getPaintState() {
+        return JSON.parse(JSON.stringify(this.paintState));
+    }
+
+    // Animate move
+    async animateMove(move, duration = 300) {
+        return new Promise(resolve => {
+            if (this.isAnimating) {
+                this.animationQueue.push({ move, duration, resolve });
+                return;
+            }
+
+            this.isAnimating = true;
+            const face = move.charAt(0).toUpperCase();
+            const prime = move.includes("'");
+            const double = move.includes("2");
+
+            const angle = (prime ? 1 : -1) * Math.PI / 2 * (double ? 2 : 1);
+            const cubiesToRotate = this.getCubiesOnFace(face);
+            const rotationGroup = new THREE.Group();
+            this.scene.add(rotationGroup);
+
+            cubiesToRotate.forEach(cubie => {
+                this.cubeGroup.remove(cubie);
+                rotationGroup.add(cubie);
+            });
+
+            const axis = this.faceNormals[face].clone();
+            const startTime = Date.now();
+
+            const animateRotation = () => {
+                const elapsed = Date.now() - startTime;
+                const progress = Math.min(elapsed / duration, 1);
+                const eased = 1 - Math.pow(1 - progress, 3);
+
+                rotationGroup.setRotationFromAxisAngle(axis, angle * eased);
+
+                if (progress < 1) {
+                    requestAnimationFrame(animateRotation);
+                } else {
+                    cubiesToRotate.forEach(cubie => {
+                        const pos = new THREE.Vector3();
+                        cubie.getWorldPosition(pos);
+                        cubie.position.set(Math.round(pos.x), Math.round(pos.y), Math.round(pos.z));
+                        cubie.userData.x = cubie.position.x;
+                        cubie.userData.y = cubie.position.y;
+                        cubie.userData.z = cubie.position.z;
+
+                        const worldQuat = new THREE.Quaternion();
+                        cubie.getWorldQuaternion(worldQuat);
+                        cubie.quaternion.copy(worldQuat);
+
+                        rotationGroup.remove(cubie);
+                        this.cubeGroup.add(cubie);
+                    });
+
+                    this.scene.remove(rotationGroup);
+                    this.isAnimating = false;
+
+                    if (this.animationQueue.length > 0) {
+                        const next = this.animationQueue.shift();
+                        this.animateMove(next.move, next.duration).then(next.resolve);
+                    }
+
+                    resolve();
+                }
+            };
+
+            animateRotation();
+        });
+    }
+
+    getCubiesOnFace(face) {
+        return this.cubies.filter(cubie => {
+            const { x, y, z } = cubie.userData;
+            switch (face) {
+                case 'R': return x === 1;
+                case 'L': return x === -1;
+                case 'U': return y === 1;
+                case 'D': return y === -1;
+                case 'F': return z === 1;
+                case 'B': return z === -1;
+                default: return false;
+            }
+        });
+    }
+
+    resetCube(unpainted = false) {
+        if (this.cubeGroup) {
+            this.scene.remove(this.cubeGroup);
+        }
+        this.cubies = [];
+        this.animationQueue = [];
+        this.isAnimating = false;
+        this.buildCube(unpainted);
+    }
+
+    animate() {
+        requestAnimationFrame(() => this.animate());
+        this.controls.update();
+        this.renderer.render(this.scene, this.camera);
+    }
+
+    onResize() {
+        const width = this.container.clientWidth;
+        const height = this.container.clientHeight;
+        this.camera.aspect = width / height;
+        this.camera.updateProjectionMatrix();
+        this.renderer.setSize(width, height);
+    }
+}
+
+export default CubeRenderer;
