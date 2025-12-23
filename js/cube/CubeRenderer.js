@@ -17,16 +17,16 @@ export class CubeRenderer {
         this.mouse = new THREE.Vector2();
         this.onPaintCallback = null;
 
-        // Color mapping
+        // Color mapping - Vibrant bright colors
         this.colors = {
-            'W': 0xf5f0e8,
-            'Y': 0xf0c75e,
-            'R': 0xc94a4a,
-            'O': 0xd97b3d,
-            'B': 0x4a7dc9,
-            'G': 0x4aab6b,
-            'X': 0x1f1d1b,
-            'U': 0x0a0a0a
+            'W': 0xffffff,  // Pure white
+            'Y': 0xffcc00,  // Bright yellow
+            'R': 0xff3333,  // Bright red
+            'O': 0xff8c00,  // Bright orange
+            'B': 0x0066ff,  // Bright blue
+            'G': 0x00cc44,  // Bright green
+            'X': 0x1a1a1a,  // Internal (dark)
+            'U': 0x0a0a0a   // Unpainted (black)
         };
 
         // Face normals
