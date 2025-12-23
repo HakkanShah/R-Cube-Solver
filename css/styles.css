@@ -835,6 +835,101 @@ body::before {
     border-color: var(--accent);
 }
 
+/* ============================================
+   TOAST NOTIFICATIONS
+   ============================================ */
+
+.toast-container {
+    position: fixed;
+    top: var(--space-5);
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 1001;
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-2);
+    pointer-events: none;
+    max-width: 90vw;
+}
+
+.toast {
+    display: flex;
+    align-items: center;
+    gap: var(--space-3);
+    padding: var(--space-3) var(--space-4);
+    background: var(--bg-card);
+    border: 1px solid var(--bg-elevated);
+    border-radius: var(--radius-md);
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+    backdrop-filter: blur(12px);
+    font-size: 0.867rem;
+    color: var(--text-primary);
+    pointer-events: auto;
+    animation: toastIn 0.3s var(--ease-out), toastOut 0.3s var(--ease-out) 2.7s forwards;
+}
+
+.toast.error {
+    border-color: var(--error);
+    background: rgba(201, 74, 74, 0.15);
+}
+
+.toast.success {
+    border-color: var(--success);
+    background: rgba(74, 171, 107, 0.15);
+}
+
+.toast.warning {
+    border-color: var(--accent);
+    background: var(--accent-muted);
+}
+
+.toast-icon {
+    font-size: 1.2rem;
+    flex-shrink: 0;
+}
+
+.toast-message {
+    flex: 1;
+    line-height: 1.4;
+}
+
+.toast-close {
+    background: none;
+    border: none;
+    color: var(--text-muted);
+    font-size: 1rem;
+    cursor: pointer;
+    padding: var(--space-1);
+    opacity: 0.6;
+    transition: opacity var(--duration);
+}
+
+.toast-close:hover {
+    opacity: 1;
+}
+
+@keyframes toastIn {
+    from {
+        opacity: 0;
+        transform: translateY(-20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+@keyframes toastOut {
+    from {
+        opacity: 1;
+        transform: translateY(0);
+    }
+    to {
+        opacity: 0;
+        transform: translateY(-20px);
+    }
+}
+
 /* Mobile Navigation */
 .mobile-nav {
     display: none;
@@ -888,6 +983,7 @@ body::before {
     .main-content {
         flex-direction: column;
         padding: var(--space-4);
+        gap: var(--space-4);
     }
     
     .sidebar {
@@ -895,11 +991,13 @@ body::before {
     }
     
     .cube-viewport {
-        min-height: 380px;
+        min-height: 45vh;
+        max-height: 50vh;
     }
     
     #cube-container {
-        min-height: 380px;
+        min-height: 45vh;
+        max-height: 50vh;
     }
 }
 
@@ -914,6 +1012,7 @@ body::before {
     
     .header {
         padding: var(--space-3) var(--space-4);
+        position: relative;
     }
     
     .logo h1 {
@@ -928,19 +1027,37 @@ body::before {
     /* Show mobile nav */
     .mobile-nav {
         display: flex;
+        justify-content: space-around;
     }
     
     .main-content {
         padding: var(--space-3);
-        padding-bottom: calc(70px + var(--safe-bottom));
+        padding-bottom: calc(80px + var(--safe-bottom));
+        gap: var(--space-3);
     }
     
+    /* Cube takes more vertical space on mobile */
     .cube-viewport {
-        min-height: 280px;
+        min-height: 42vh;
+        max-height: 48vh;
+        border-radius: var(--radius-lg);
+        overflow: hidden;
     }
     
     #cube-container {
-        min-height: 280px;
+        min-height: 42vh;
+        max-height: 48vh;
+        border-radius: var(--radius-lg);
+    }
+    
+    /* Better touch viewport info */
+    .viewport-info {
+        bottom: var(--space-3);
+    }
+    
+    .info-badge {
+        font-size: 0.7rem;
+        padding: var(--space-1) var(--space-2);
     }
     
     .sidebar {
@@ -953,50 +1070,132 @@ body::before {
     
     .panel-title {
         padding: var(--space-3);
+        font-size: 0.75rem;
     }
     
     .control-section {
         padding: var(--space-3);
     }
     
+    .control-section h3 {
+        font-size: 0.65rem;
+        margin-bottom: var(--space-2);
+    }
+    
+    /* Larger touch targets for move buttons */
     .move-row {
         grid-template-columns: repeat(4, 1fr);
-        gap: var(--space-1);
+        gap: var(--space-2);
     }
     
     .move-btn {
-        padding: var(--space-2);
-        font-size: 0.8rem;
+        padding: var(--space-3);
+        font-size: 0.9rem;
+        min-height: 44px;
+        border-radius: var(--radius-md);
     }
     
+    /* Larger action buttons */
     .action-btn {
-        padding: var(--space-2) var(--space-3);
-        font-size: 0.8rem;
+        padding: var(--space-3);
+        font-size: 0.85rem;
+        min-height: 48px;
+        border-radius: var(--radius-md);
     }
     
+    .action-buttons {
+        gap: var(--space-3);
+    }
+    
+    /* Larger color swatches for touch */
     .color-swatch {
-        width: 36px;
-        height: 36px;
+        width: 44px;
+        height: 44px;
+        border-radius: var(--radius-md);
     }
     
+    .color-picker {
+        gap: var(--space-2);
+        justify-content: space-between;
+    }
+    
+    /* Compact tutorial on mobile */
     .tutorial-steps {
-        max-height: 250px;
+        max-height: 220px;
     }
     
     .tutorial-step {
         padding: var(--space-3);
     }
     
+    .tutorial-nav {
+        padding: var(--space-3);
+    }
+    
+    .nav-btn {
+        min-height: 44px;
+    }
+    
+    /* Hide help on mobile (use modal instead) */
     .help-btn {
         display: none;
     }
     
+    /* Solver improvements */
     .solver-instructions {
         padding: var(--space-3);
     }
     
     .instructions-text {
         font-size: 0.8rem;
+        line-height: 1.5;
+    }
+    
+    .color-counts {
+        grid-template-columns: repeat(2, 1fr);
+        gap: var(--space-2);
+    }
+    
+    .color-count {
+        padding: var(--space-2);
+        font-size: 0.75rem;
+    }
+    
+    .count-swatch {
+        width: 14px;
+        height: 14px;
+    }
+    
+    .solver-status {
+        font-size: 0.8rem;
+        padding: var(--space-2);
+    }
+    
+    .solution-display {
+        padding: var(--space-3);
+    }
+    
+    .solution-moves {
+        max-height: 100px;
+        font-size: 0.8rem;
+    }
+    
+    .solution-move {
+        padding: 3px 6px;
+        margin: 1px;
+        font-size: 0.75rem;
+    }
+    
+    /* Move history compact */
+    .move-history {
+        max-height: 60px;
+        min-height: 40px;
+        padding: var(--space-2);
+    }
+    
+    .history-move {
+        font-size: 0.7rem;
+        padding: 2px 4px;
     }
 }
 
@@ -1006,20 +1205,38 @@ body::before {
 
 @media (max-width: 375px) {
     .cube-viewport {
-        min-height: 240px;
+        min-height: 38vh;
+        max-height: 42vh;
     }
     
     #cube-container {
-        min-height: 240px;
+        min-height: 38vh;
+        max-height: 42vh;
     }
     
     .color-swatch {
-        width: 32px;
-        height: 32px;
+        width: 40px;
+        height: 40px;
     }
     
     .color-picker {
-        gap: var(--space-2);
+        gap: var(--space-1);
+    }
+    
+    .move-btn {
+        padding: var(--space-2);
+        font-size: 0.85rem;
+        min-height: 40px;
+    }
+    
+    .action-btn {
+        padding: var(--space-2);
+        font-size: 0.8rem;
+        min-height: 44px;
+    }
+    
+    .color-counts {
+        grid-template-columns: repeat(3, 1fr);
     }
 }
 
@@ -1031,19 +1248,22 @@ body::before {
     .main-content {
         flex-direction: row;
         padding: var(--space-2);
+        gap: var(--space-2);
     }
     
     .cube-viewport {
-        min-height: 200px;
+        min-height: 90%;
+        max-height: 95%;
         flex: 1;
     }
     
     #cube-container {
-        min-height: 200px;
+        min-height: 90%;
+        max-height: 95%;
     }
     
     .sidebar {
-        width: 280px;
+        width: 300px;
         max-height: calc(100vh - 60px);
         overflow-y: auto;
     }
@@ -1054,6 +1274,47 @@ body::before {
     
     .nav-tabs {
         display: flex;
+    }
+    
+    .panel-title {
+        display: none;
+    }
+    
+    .control-section {
+        padding: var(--space-2);
+    }
+}
+
+/* ============================================
+   TOUCH ENHANCEMENTS
+   ============================================ */
+
+@media (hover: none) and (pointer: coarse) {
+    /* Remove hover effects on touch devices */
+    .move-btn:hover,
+    .action-btn:hover,
+    .nav-btn:hover,
+    .color-swatch:hover {
+        transform: none;
+    }
+    
+    /* Add active states instead */
+    .move-btn:active {
+        transform: scale(0.95);
+        background: var(--accent-muted);
+    }
+    
+    .action-btn:active {
+        transform: scale(0.97);
+        opacity: 0.8;
+    }
+    
+    .color-swatch:active {
+        transform: scale(0.95);
+    }
+    
+    .mobile-nav-btn:active {
+        transform: scale(0.95);
     }
 }
 
@@ -1075,3 +1336,11 @@ body::before {
 ::-webkit-scrollbar-thumb:hover {
     background: var(--accent-soft);
 }
+
+/* Hide scrollbar on mobile for cleaner look */
+@media (max-width: 640px) {
+    ::-webkit-scrollbar {
+        width: 3px;
+    }
+}
+

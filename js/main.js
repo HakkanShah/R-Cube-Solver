@@ -152,16 +152,9 @@ class RubiksCubeApp {
 
     onPaintSticker(face, index, color, error) {
         if (error) {
-            // Show error message
-            this.updateSolverStatus(`⚠️ ${error}`);
-            // Haptic feedback for error
-            if (navigator.vibrate) {
-                navigator.vibrate([100, 50, 100]);
-            }
-            // Clear error after 2 seconds
-            setTimeout(() => {
-                this.updateColorCounts();
-            }, 2000);
+            // Show paint validation error as toast
+            this.showToast(error, 'warning');
+            // Haptic feedback already handled in showToast
         } else {
             this.updateColorCounts();
         }
@@ -191,12 +184,14 @@ class RubiksCubeApp {
             }
         });
 
-        // Update status
+        // Update status - keep progress inline, warnings as toast
         const allComplete = Object.values(counts).every(c => c === 9);
         const hasOverflow = Object.values(counts).some(c => c > 9);
 
         if (hasOverflow) {
-            this.updateSolverStatus('⚠️ Too many of one color!');
+            // Show warning as toast, but keep inline status as progress
+            this.showToast('Too many of one color! Check color counts.', 'warning');
+            this.updateSolverStatus(`Painted ${totalPainted}/54 stickers`);
         } else if (allComplete) {
             this.updateSolverStatus('✓ All colors correct! Click "Solve My Cube"');
         } else {
@@ -223,7 +218,7 @@ class RubiksCubeApp {
         });
 
         if (unpaintedCount > 0) {
-            this.showSolutionError(`Please paint all stickers. ${unpaintedCount} remaining.`);
+            this.showToast(`Please paint all stickers. ${unpaintedCount} remaining.`, 'warning');
             return;
         }
 
@@ -285,9 +280,36 @@ class RubiksCubeApp {
     }
 
     showSolutionError(message) {
-        const solutionMoves = document.getElementById('solution-moves');
-        if (solutionMoves) {
-            solutionMoves.innerHTML = `<span class="error-message">⚠️ ${message}</span>`;
+        this.showToast(message, 'error');
+    }
+
+    showToast(message, type = 'error') {
+        const container = document.getElementById('toast-container');
+        if (!container) return;
+
+        const toast = document.createElement('div');
+        toast.className = `toast ${type}`;
+
+        const icon = type === 'error' ? '⚠️' : type === 'success' ? '✅' : '💡';
+
+        toast.innerHTML = `
+            <span class="toast-icon">${icon}</span>
+            <span class="toast-message">${message}</span>
+            <button class="toast-close" onclick="this.parentElement.remove()">✕</button>
+        `;
+
+        container.appendChild(toast);
+
+        // Auto-remove after 3 seconds
+        setTimeout(() => {
+            if (toast.parentElement) {
+                toast.remove();
+            }
+        }, 3000);
+
+        // Haptic feedback on mobile
+        if (navigator.vibrate && type === 'error') {
+            navigator.vibrate([100, 50, 100]);
         }
     }
 
