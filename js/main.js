@@ -245,18 +245,24 @@ class RubiksCubeApp {
         this.updateSolverStatus('Calculating solution...');
         await this.delay(100);
 
-        const solution = this.solver.solve(tempCube);
+        // Get paint state and solve
+        const result = this.solver.solve(paintState);
 
-        if (solution.length === 0) {
-            this.showSolutionError('Could not find solution. Check for invalid piece combinations.');
+        if (!result.success) {
+            this.showSolutionError(result.error || 'Could not find solution.');
             return;
         }
 
-        this.currentSolution = solution;
+        if (result.solution.length === 0) {
+            this.showSolution(['Already solved! 🎉']);
+            return;
+        }
+
+        this.currentSolution = result.solution;
         this.solutionIndex = 0;
 
-        this.showSolution(solution);
-        this.updateSolverStatus(`Solution found: ${solution.length} moves`);
+        this.showSolution(result.solution);
+        this.updateSolverStatus(`Solution found: ${result.solution.length} moves`);
     }
 
     showSolution(moves) {
