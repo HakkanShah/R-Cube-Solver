@@ -56,34 +56,34 @@ export class Solver {
      */
     solve(paintState) {
         try {
-            // Step 1: Map colors to faces using centers
-            const colorToFace = this.mapColorsToFaces(paintState);
-
-            // Step 2: Convert painted colors to facelet array
-            const facelets = this.toFaceletString(paintState, colorToFace);
-
-            // Step 3: Validate facelet counts
-            const countValidation = this.validateFaceletCounts(facelets);
-            if (!countValidation.valid) {
-                return { success: false, solution: [], error: countValidation.error };
+            // STEP 1 & 2: Center & Color Count Validation
+            const validation = this.validateState(paintState);
+            if (!validation.valid) {
+                return { success: false, solution: [], error: validation.error };
             }
 
-            // Step 4: Convert to cubies
+            // STEP 3: Map colors to standard faces (U, R, F, D, L, B)
+            const colorToFace = this.mapColorsToFaces(paintState);
+
+            // STEP 4: Convert painted colors to facelet string
+            const facelets = this.toFaceletString(paintState, colorToFace);
+
+            // STEP 5: Convert facelets to Cubies (Corner/Edge pieces)
             const cubies = this.faceletsToCubies(facelets);
             if (cubies.error) {
                 return { success: false, solution: [], error: cubies.error };
             }
 
-            // Step 5: Validate cube invariants (parity, orientation)
+            // STEP 6: Validate Global Invariants (Parity, Orientation)
             const invariantCheck = this.validateInvariants(cubies);
             if (!invariantCheck.valid) {
                 return { success: false, solution: [], error: invariantCheck.error };
             }
 
-            // Step 6: Solve
+            // STEP 7: Solve
             const solution = this.solveCube(facelets);
 
-            // Step 7: Post-process (merge/cancel)
+            // STEP 8: Optimize
             const optimized = this.optimizeMoves(solution);
 
             return { success: true, solution: optimized, error: null };
@@ -92,21 +92,64 @@ export class Solver {
         }
     }
 
-    /**
-     * Step 1: Map colors to faces using center stickers
-     */
+    validateState(paintState) {
+        // 1. Check Center Uniqueness
+        const centers = {};
+        for (const face of this.faceOrder) {
+            const centerColor = paintState[face][4];
+            if (centers[centerColor]) {
+                const existingFace = this.getFaceName(centers[centerColor]);
+                const currentFace = this.getFaceName(face);
+                return { valid: false, error: `Duplicate center color '${centerColor}' on ${existingFace} and ${currentFace}. Centers must be unique.` };
+            }
+            centers[centerColor] = face;
+        }
+
+        if (Object.keys(centers).length !== 6) {
+            return { valid: false, error: 'Must have 6 unique center colors.' };
+        }
+
+        // 2. Check Color Counts
+        const colorCounts = {};
+        Object.keys(centers).forEach(c => colorCounts[c] = 0);
+
+        for (const face of this.faceOrder) {
+            for (const color of paintState[face]) {
+                if (colorCounts[color] === undefined) {
+                    return { valid: false, error: `Sticker color '${color}' does not match any center.` };
+                }
+                colorCounts[color]++;
+            }
+        }
+
+        for (const [color, count] of Object.entries(colorCounts)) {
+            if (count > 9) {
+                const faceName = this.getFaceName(centers[color]);
+                return { valid: false, error: `Too many '${color}' stickers (${count}). Maximum is 9 (Center: ${faceName}).` };
+            }
+            if (count < 9) {
+                const faceName = this.getFaceName(centers[color]);
+                return { valid: false, error: `Not enough '${color}' stickers (${count}). Need 9 (Center: ${faceName}).` };
+            }
+        }
+
+        return { valid: true };
+    }
+
+    getFaceName(faceCode) {
+        const names = { 'U': 'Up', 'D': 'Down', 'F': 'Front', 'B': 'Back', 'L': 'Left', 'R': 'Right' };
+        return names[faceCode] || faceCode;
+    }
+
     mapColorsToFaces(paintState) {
         const colorToFace = {};
         for (const face of this.faceOrder) {
-            const centerColor = paintState[face][4]; // Index 4 is center
+            const centerColor = paintState[face][4];
             colorToFace[centerColor] = face;
         }
         return colorToFace;
     }
 
-    /**
-     * Step 2: Convert paint state to 54-char facelet string
-     */
     toFaceletString(paintState, colorToFace) {
         let facelets = '';
         for (const face of this.faceOrder) {
@@ -123,25 +166,6 @@ export class Solver {
     }
 
     /**
-     * Step 3: Validate each face appears exactly 9 times
-     */
-    validateFaceletCounts(facelets) {
-        const counts = { U: 0, R: 0, F: 0, D: 0, L: 0, B: 0 };
-        for (const c of facelets) {
-            if (counts[c] === undefined) {
-                return { valid: false, error: `Invalid facelet character: ${c}` };
-            }
-            counts[c]++;
-        }
-        for (const face of this.faceOrder) {
-            if (counts[face] !== 9) {
-                return { valid: false, error: `Face ${face} has ${counts[face]} stickers (expected 9)` };
-            }
-        }
-        return { valid: true };
-    }
-
-    /**
      * Step 4: Convert facelets to cubie representation
      */
     faceletsToCubies(facelets) {
@@ -154,9 +178,17 @@ export class Solver {
         for (let i = 0; i < 8; i++) {
             const corner = this.corners[i];
             const colors = corner.facelets.map(idx => facelets[idx]);
+
+            // Check for duplicate colors on the same corner (Impossible)
+            const unique = new Set(colors);
+            if (unique.size !== 3) {
+                return { error: `Corner piece at ${this.getCornerName(i)} has duplicate colors.` };
+            }
+
             const found = this.findCorner(colors);
             if (found.index === -1) {
-                return { error: `Invalid corner at position ${i}: ${colors.join('')}` };
+                // Determine which colors are impossible together
+                return { error: `Impossible corner piece at ${this.getCornerName(i)} (Colors do not form a valid corner).` };
             }
             cornerPositions.push(found.index);
             cornerOrientations.push(found.orientation);
@@ -166,9 +198,14 @@ export class Solver {
         for (let i = 0; i < 12; i++) {
             const edge = this.edges[i];
             const colors = edge.facelets.map(idx => facelets[idx]);
+
+            if (colors[0] === colors[1]) {
+                return { error: `Edge piece at ${this.getEdgeName(i)} has duplicate colors.` };
+            }
+
             const found = this.findEdge(colors);
             if (found.index === -1) {
-                return { error: `Invalid edge at position ${i}: ${colors.join('')}` };
+                return { error: `Impossible edge piece at ${this.getEdgeName(i)} (Colors do not form a valid edge).` };
             }
             edgePositions.push(found.index);
             edgeOrientations.push(found.orientation);
@@ -227,6 +264,21 @@ export class Solver {
         return { index: -1, orientation: 0 };
     }
 
+    getCornerName(index) {
+        // URF, UFL, ULB, UBR, DRF, DFL, DLB, DBR
+        const names = ['Top-Right-Front', 'Top-Front-Left', 'Top-Left-Back', 'Top-Back-Right',
+            'Bottom-Right-Front', 'Bottom-Front-Left', 'Bottom-Left-Back', 'Bottom-Back-Right'];
+        return names[index] || `Corner ${index}`;
+    }
+
+    getEdgeName(index) {
+        // UR, UF, UL, UB, DR, DF, DL, DB, FR, FL, BL, BR
+        const names = ['Top-Right', 'Top-Front', 'Top-Left', 'Top-Back',
+            'Bottom-Right', 'Bottom-Front', 'Bottom-Left', 'Bottom-Back',
+            'Front-Right', 'Front-Left', 'Back-Left', 'Back-Right'];
+        return names[index] || `Edge ${index}`;
+    }
+
     /**
      * Step 5: Validate cube invariants
      */
@@ -235,29 +287,29 @@ export class Solver {
 
         // Check for duplicate positions
         if (new Set(cornerPositions).size !== 8) {
-            return { valid: false, error: 'Duplicate corner pieces detected' };
+            return { valid: false, error: 'Cube contains duplicate corner pieces. Check for duplicate corners.' };
         }
         if (new Set(edgePositions).size !== 12) {
-            return { valid: false, error: 'Duplicate edge pieces detected' };
+            return { valid: false, error: 'Cube contains duplicate edge pieces. Check for duplicate edges.' };
         }
 
         // Corner orientation sum must be divisible by 3
         const cornerOrientSum = cornerOrientations.reduce((a, b) => a + b, 0);
         if (cornerOrientSum % 3 !== 0) {
-            return { valid: false, error: 'Invalid corner orientation (twisted corner)' };
+            return { valid: false, error: 'Unsolvable State: One or more corners are twisted physically.' };
         }
 
         // Edge orientation sum must be even
         const edgeOrientSum = edgeOrientations.reduce((a, b) => a + b, 0);
         if (edgeOrientSum % 2 !== 0) {
-            return { valid: false, error: 'Invalid edge orientation (flipped edge)' };
+            return { valid: false, error: 'Unsolvable State: One or more edges are flipped physically.' };
         }
 
         // Permutation parity must match
         const cornerParity = this.calculateParity(cornerPositions);
         const edgeParity = this.calculateParity(edgePositions);
         if (cornerParity !== edgeParity) {
-            return { valid: false, error: 'Permutation parity mismatch (impossible state)' };
+            return { valid: false, error: 'Unsolvable State: Parity mismatch (likely 2 pieces swapped). Impossible to solve.' };
         }
 
         return { valid: true };

@@ -338,13 +338,13 @@ export class CubeRenderer {
             case 2: // Up (+Y)
                 if (y !== 1) return { faceName: null, stickerIndex: -1 };
                 faceName = 'U';
-                row = 1 - z;
+                row = z + 1;
                 col = x + 1;
                 break;
             case 3: // Down (-Y)
                 if (y !== -1) return { faceName: null, stickerIndex: -1 };
                 faceName = 'D';
-                row = z + 1;
+                row = 1 - z;
                 col = x + 1;
                 break;
             case 4: // Front (+Z)

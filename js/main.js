@@ -41,7 +41,7 @@ class RubiksCubeApp {
         this.setupSolverPanel();
         this.updateViewportHint();
 
-        console.log('🎲 Rubik\'s Cube Solver Ready!');
+        console.log('Rubik\'s Cube Solver Ready!');
     }
 
     setupTabs() {
