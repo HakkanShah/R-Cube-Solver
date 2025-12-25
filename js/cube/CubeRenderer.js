@@ -17,6 +17,11 @@ export class CubeRenderer {
         this.mouse = new THREE.Vector2();
         this.onPaintCallback = null;
 
+        // Orientation Gizmo (Axis Indicator)
+        this.gizmoScene = null;
+        this.gizmoCamera = null;
+        this.gizmoSize = 130; // pixels
+
         // Color mapping - Vibrant bright colors
         this.colors = {
             'W': 0xffffff,  // Pure white
@@ -80,6 +85,7 @@ export class CubeRenderer {
         this.scene.add(backLight);
 
         this.buildCube();
+        this.initOrientationGizmo();
         window.addEventListener('resize', () => this.onResize());
         this.renderer.domElement.addEventListener('click', (e) => this.onClick(e));
         this.renderer.domElement.addEventListener('touchend', (e) => this.onTouch(e));
@@ -467,7 +473,13 @@ export class CubeRenderer {
     animate() {
         requestAnimationFrame(() => this.animate());
         this.controls.update();
+
+        // Render main scene
+        this.renderer.setViewport(0, 0, this.container.clientWidth, this.container.clientHeight);
         this.renderer.render(this.scene, this.camera);
+
+        // Render orientation gizmo in corner
+        this.renderOrientationGizmo();
     }
 
     onResize() {
@@ -476,6 +488,149 @@ export class CubeRenderer {
         this.camera.aspect = width / height;
         this.camera.updateProjectionMatrix();
         this.renderer.setSize(width, height);
+    }
+
+    // ============ ORIENTATION GIZMO ============
+
+    initOrientationGizmo() {
+        // Create separate scene for the gizmo
+        this.gizmoScene = new THREE.Scene();
+
+        // Orthographic camera for consistent size
+        this.gizmoCamera = new THREE.OrthographicCamera(-1.8, 1.8, 1.8, -1.8, 0.1, 100);
+        this.gizmoCamera.position.set(0, 0, 5);
+        this.gizmoCamera.lookAt(0, 0, 0);
+
+        // Add lighting
+        const light = new THREE.DirectionalLight(0xffffff, 0.8);
+        light.position.set(2, 2, 3);
+        this.gizmoScene.add(light);
+        this.gizmoScene.add(new THREE.AmbientLight(0xffffff, 0.6));
+
+        // Create the ViewCube group
+        this.gizmoGroup = new THREE.Group();
+
+        // Create mini cube with colored faces
+        this.createViewCube();
+
+        this.gizmoScene.add(this.gizmoGroup);
+    }
+
+    createViewCube() {
+        const cubeSize = 0.9;
+
+        // Face colors matching the Rubik's cube
+        const faceColors = {
+            right: 0xff3333,   // R - Red
+            left: 0xff8c00,    // L - Orange
+            top: 0xffffff,     // U - White
+            bottom: 0xffcc00,  // D - Yellow
+            front: 0x00cc44,   // F - Green
+            back: 0x0066ff     // B - Blue
+        };
+
+        // Face labels
+        const faceLabels = {
+            right: 'R', left: 'L',
+            top: 'U', bottom: 'D',
+            front: 'F', back: 'B'
+        };
+
+        // Create 6 face planes instead of a box for individual coloring
+        const faceGeometry = new THREE.PlaneGeometry(cubeSize, cubeSize);
+        const faces = [
+            { name: 'right', pos: [cubeSize / 2, 0, 0], rot: [0, Math.PI / 2, 0] },
+            { name: 'left', pos: [-cubeSize / 2, 0, 0], rot: [0, -Math.PI / 2, 0] },
+            { name: 'top', pos: [0, cubeSize / 2, 0], rot: [-Math.PI / 2, 0, 0] },
+            { name: 'bottom', pos: [0, -cubeSize / 2, 0], rot: [Math.PI / 2, 0, 0] },
+            { name: 'front', pos: [0, 0, cubeSize / 2], rot: [0, 0, 0] },
+            { name: 'back', pos: [0, 0, -cubeSize / 2], rot: [0, Math.PI, 0] }
+        ];
+
+        faces.forEach(face => {
+            // Create face with texture
+            const canvas = document.createElement('canvas');
+            canvas.width = 128;
+            canvas.height = 128;
+            const ctx = canvas.getContext('2d');
+
+            // Fill background color
+            const color = faceColors[face.name];
+            ctx.fillStyle = '#' + color.toString(16).padStart(6, '0');
+            ctx.fillRect(0, 0, 128, 128);
+
+            // Add border
+            ctx.strokeStyle = '#333333';
+            ctx.lineWidth = 4;
+            ctx.strokeRect(2, 2, 124, 124);
+
+            // Add label text
+            ctx.fillStyle = face.name === 'top' ? '#333333' : '#ffffff';
+            ctx.font = 'bold 72px Arial';
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.fillText(faceLabels[face.name], 64, 68);
+
+            const texture = new THREE.CanvasTexture(canvas);
+            texture.minFilter = THREE.LinearFilter;
+
+            const material = new THREE.MeshBasicMaterial({
+                map: texture,
+                side: THREE.DoubleSide
+            });
+
+            const mesh = new THREE.Mesh(faceGeometry, material);
+            mesh.position.set(...face.pos);
+            mesh.rotation.set(...face.rot);
+
+            this.gizmoGroup.add(mesh);
+        });
+
+        // Add subtle edges for depth
+        const edgesGeometry = new THREE.BoxGeometry(cubeSize, cubeSize, cubeSize);
+        const edgesMaterial = new THREE.MeshBasicMaterial({
+            color: 0x222222,
+            wireframe: true,
+            transparent: true,
+            opacity: 0.5
+        });
+        const edges = new THREE.Mesh(edgesGeometry, edgesMaterial);
+        this.gizmoGroup.add(edges);
+    }
+
+    renderOrientationGizmo() {
+        if (!this.gizmoScene || !this.gizmoCamera) return;
+
+        // Sync gizmo rotation with main camera
+        // Get the inverse of camera rotation so gizmo shows absolute orientation
+        this.gizmoGroup.quaternion.copy(this.camera.quaternion).invert();
+
+        // Set viewport for gizmo (top-left corner)
+        const size = this.gizmoSize;
+        const padding = 15;
+        const topY = this.container.clientHeight - size - padding;
+
+        // Save current state
+        const currentAutoClear = this.renderer.autoClear;
+        this.renderer.autoClear = false;
+
+        // Set viewport and scissor for gizmo area
+        this.renderer.setViewport(padding, topY, size, size);
+        this.renderer.setScissor(padding, topY, size, size);
+        this.renderer.setScissorTest(true);
+
+        // Clear depth buffer only (keep main scene render)
+        this.renderer.clearDepth();
+
+        // Render gizmo
+        this.renderer.render(this.gizmoScene, this.gizmoCamera);
+
+        // Reset state
+        this.renderer.setScissorTest(false);
+        this.renderer.autoClear = currentAutoClear;
+
+        // Reset viewport to full size for any subsequent renders
+        this.renderer.setViewport(0, 0, this.container.clientWidth, this.container.clientHeight);
     }
 }
 
