@@ -82,9 +82,14 @@
                         <div class="move-history" id="move-history">
                             <span class="placeholder">No moves yet</span>
                         </div>
-                        <button class="action-btn" id="undo-btn">
-                            <i data-lucide="undo-2" class="btn-icon"></i> Undo
-                        </button>
+                        <div class="history-actions">
+                            <button class="action-btn history-btn" id="undo-btn" title="Undo (Ctrl+Z)">
+                                <span class="btn-icon">↩</span> Undo
+                            </button>
+                            <button class="action-btn history-btn" id="redo-btn" title="Redo (Ctrl+Y)">
+                                <span class="btn-icon">↪</span> Redo
+                            </button>
+                        </div>
                     </div>
                 </div>
 

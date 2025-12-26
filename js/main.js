@@ -44,7 +44,40 @@ class RubiksCubeApp {
         this.setupSolverPanel();
         this.updateViewportHint();
 
+        // Scramble the cube on first load for a better first impression
+        this.initialScramble();
+
         console.log('Rubik\'s Cube Solver Ready!');
+    }
+
+    async initialScramble() {
+        // Wait a moment for the renderer to be ready
+        await this.delay(300);
+
+        // Generate a random scramble (15-20 moves)
+        const moves = ['U', 'D', 'R', 'L', 'F', 'B'];
+        const modifiers = ['', "'", '2'];
+        const scrambleLength = 15 + Math.floor(Math.random() * 6);
+
+        let lastMove = '';
+        for (let i = 0; i < scrambleLength; i++) {
+            // Avoid same face twice in a row
+            let move;
+            do {
+                move = moves[Math.floor(Math.random() * moves.length)];
+            } while (move === lastMove);
+
+            const modifier = modifiers[Math.floor(Math.random() * modifiers.length)];
+            const fullMove = move + modifier;
+
+            // Apply to state (instant, no animation for initial scramble)
+            this.cubeState.applyMove(fullMove);
+
+            lastMove = move;
+        }
+
+        // Sync renderer with scrambled state
+        this.renderer.syncWithState(this.cubeState);
     }
 
     setupTabs() {

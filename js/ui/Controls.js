@@ -1,4 +1,4 @@
-// Controls.js - UI Controls with Mobile Support
+// Controls.js - UI Controls with Undo/Redo and Mobile Support
 
 export class Controls {
     constructor(cubeState, cubeRenderer, onMoveCallback) {
@@ -6,6 +6,10 @@ export class Controls {
         this.renderer = cubeRenderer;
         this.onMove = onMoveCallback || (() => { });
         this.selectedColor = 'W';
+
+        // Separate history for user moves (not scramble)
+        this.userMoveHistory = [];
+        this.redoStack = [];
 
         this.init();
     }
@@ -37,6 +41,7 @@ export class Controls {
         const scrambleBtn = document.getElementById('scramble-btn');
         const resetBtn = document.getElementById('reset-btn');
         const undoBtn = document.getElementById('undo-btn');
+        const redoBtn = document.getElementById('redo-btn');
 
         if (scrambleBtn) {
             scrambleBtn.addEventListener('click', () => this.scramble());
@@ -48,6 +53,10 @@ export class Controls {
 
         if (undoBtn) {
             undoBtn.addEventListener('click', () => this.undo());
+        }
+
+        if (redoBtn) {
+            redoBtn.addEventListener('click', () => this.redo());
         }
     }
 
@@ -71,6 +80,9 @@ export class Controls {
             } else if ((e.key === 'z' || e.key === 'Z') && (e.ctrlKey || e.metaKey)) {
                 e.preventDefault();
                 this.undo();
+            } else if ((e.key === 'y' || e.key === 'Y') && (e.ctrlKey || e.metaKey)) {
+                e.preventDefault();
+                this.redo();
             }
         });
     }
@@ -143,6 +155,12 @@ export class Controls {
         // Animate
         await this.renderer.animateMove(move, 250);
 
+        // Add to user move history (for display)
+        this.userMoveHistory.push(move);
+
+        // Clear redo stack when new move is made
+        this.redoStack = [];
+
         // Update history display
         this.updateMoveHistory();
 
@@ -172,6 +190,9 @@ export class Controls {
             await this.renderer.animateMove(move, 80);
         }
 
+        // Clear user move history on scramble (scramble moves not shown)
+        this.userMoveHistory = [];
+        this.redoStack = [];
         this.updateMoveHistory();
     }
 
@@ -182,20 +203,54 @@ export class Controls {
 
         this.cubeState.reset();
         this.renderer.resetCube();
+
+        // Clear user move history on reset
+        this.userMoveHistory = [];
+        this.redoStack = [];
         this.updateMoveHistory();
     }
 
     async undo() {
-        const lastMove = this.cubeState.undo();
-        if (lastMove) {
-            if (navigator.vibrate) {
-                navigator.vibrate(10);
-            }
+        if (this.userMoveHistory.length === 0) return;
 
-            const inverse = this.getInverseMove(lastMove);
-            await this.renderer.animateMove(inverse, 200);
-            this.updateMoveHistory();
+        const lastMove = this.userMoveHistory.pop();
+
+        if (navigator.vibrate) {
+            navigator.vibrate(10);
         }
+
+        // Apply inverse move to state
+        const inverse = this.getInverseMove(lastMove);
+        this.cubeState.applyMove(inverse);
+
+        // Animate
+        await this.renderer.animateMove(inverse, 200);
+
+        // Add to redo stack
+        this.redoStack.push(lastMove);
+
+        this.updateMoveHistory();
+    }
+
+    async redo() {
+        if (this.redoStack.length === 0) return;
+
+        const move = this.redoStack.pop();
+
+        if (navigator.vibrate) {
+            navigator.vibrate(10);
+        }
+
+        // Apply move to state
+        this.cubeState.applyMove(move);
+
+        // Animate
+        await this.renderer.animateMove(move, 200);
+
+        // Add back to history
+        this.userMoveHistory.push(move);
+
+        this.updateMoveHistory();
     }
 
     getInverseMove(move) {
@@ -208,7 +263,7 @@ export class Controls {
         const historyEl = document.getElementById('move-history');
         if (!historyEl) return;
 
-        const moves = this.cubeState.moveHistory;
+        const moves = this.userMoveHistory;
 
         if (moves.length === 0) {
             historyEl.innerHTML = '<span class="placeholder">No moves yet</span>';
@@ -219,6 +274,17 @@ export class Controls {
             ).join('');
 
             historyEl.scrollTop = historyEl.scrollHeight;
+        }
+
+        // Update button states
+        const undoBtn = document.getElementById('undo-btn');
+        const redoBtn = document.getElementById('redo-btn');
+
+        if (undoBtn) {
+            undoBtn.disabled = this.userMoveHistory.length === 0;
+        }
+        if (redoBtn) {
+            redoBtn.disabled = this.redoStack.length === 0;
         }
     }
 

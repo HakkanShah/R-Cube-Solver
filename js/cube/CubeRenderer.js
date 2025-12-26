@@ -485,6 +485,122 @@ export class CubeRenderer {
         }
     }
 
+    /**
+     * Sync the visual cube with a CubeState object
+     * @param {CubeState} cubeState - The cube state to sync with
+     */
+    syncWithState(cubeState) {
+        const state = cubeState.getState();
+
+        // Map each cubie's faces based on position
+        this.cubies.forEach(cubie => {
+            const { x, y, z } = cubie.userData;
+
+            // For each face of the cubie that's visible (external)
+            const materials = cubie.material;
+
+            // Right face (x = 1)
+            if (x === 1) {
+                const idx = this.getStickerIndex('R', y, z);
+                if (idx !== -1) {
+                    materials[0].color.setHex(this.colors[state.R[idx]]);
+                }
+            }
+
+            // Left face (x = -1)
+            if (x === -1) {
+                const idx = this.getStickerIndex('L', y, z);
+                if (idx !== -1) {
+                    materials[1].color.setHex(this.colors[state.L[idx]]);
+                }
+            }
+
+            // Up face (y = 1)
+            if (y === 1) {
+                const idx = this.getStickerIndex('U', x, z);
+                if (idx !== -1) {
+                    materials[2].color.setHex(this.colors[state.U[idx]]);
+                }
+            }
+
+            // Down face (y = -1)
+            if (y === -1) {
+                const idx = this.getStickerIndex('D', x, z);
+                if (idx !== -1) {
+                    materials[3].color.setHex(this.colors[state.D[idx]]);
+                }
+            }
+
+            // Front face (z = 1)
+            if (z === 1) {
+                const idx = this.getStickerIndex('F', x, y);
+                if (idx !== -1) {
+                    materials[4].color.setHex(this.colors[state.F[idx]]);
+                }
+            }
+
+            // Back face (z = -1)
+            if (z === -1) {
+                const idx = this.getStickerIndex('B', x, y);
+                if (idx !== -1) {
+                    materials[5].color.setHex(this.colors[state.B[idx]]);
+                }
+            }
+        });
+    }
+
+    getStickerIndex(face, coord1, coord2) {
+        // Convert cubie coordinates to sticker index (0-8)
+        // Stickers are indexed: 0 1 2
+        //                       3 4 5
+        //                       6 7 8
+
+        let row, col;
+
+        switch (face) {
+            case 'U':
+                // x: -1,0,1 → col: 0,1,2
+                // z: 1,0,-1 → row: 0,1,2
+                col = coord1 + 1;
+                row = 1 - coord2;
+                break;
+            case 'D':
+                // x: -1,0,1 → col: 0,1,2
+                // z: -1,0,1 → row: 0,1,2
+                col = coord1 + 1;
+                row = coord2 + 1;
+                break;
+            case 'F':
+                // x: -1,0,1 → col: 0,1,2
+                // y: 1,0,-1 → row: 0,1,2
+                col = coord1 + 1;
+                row = 1 - coord2;
+                break;
+            case 'B':
+                // x: 1,0,-1 → col: 0,1,2
+                // y: 1,0,-1 → row: 0,1,2
+                col = 1 - coord1;
+                row = 1 - coord2;
+                break;
+            case 'R':
+                // z: 1,0,-1 → col: 0,1,2
+                // y: 1,0,-1 → row: 0,1,2
+                col = 1 - coord2;
+                row = 1 - coord1;
+                break;
+            case 'L':
+                // z: -1,0,1 → col: 0,1,2
+                // y: 1,0,-1 → row: 0,1,2
+                col = coord2 + 1;
+                row = 1 - coord1;
+                break;
+            default:
+                return -1;
+        }
+
+        return row * 3 + col;
+    }
+
     animate() {
         requestAnimationFrame(() => this.animate());
         this.controls.update();

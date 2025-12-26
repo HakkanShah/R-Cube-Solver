@@ -465,6 +465,46 @@ body::before {
     font-weight: 600;
 }
 
+/* History Actions (Undo/Redo) */
+.history-actions {
+    display: flex;
+    gap: var(--space-2);
+    margin-top: var(--space-2);
+}
+
+.action-btn.history-btn {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: var(--space-2);
+    padding: var(--space-2) var(--space-3);
+    background: var(--bg-elevated);
+    border: 1px solid var(--bg-hover);
+    border-radius: var(--radius-md);
+    font-size: 0.85rem;
+    transition: all 0.2s var(--ease-out);
+}
+
+.action-btn.history-btn .btn-icon {
+    font-size: 1rem;
+}
+
+.action-btn.history-btn:hover:not(:disabled) {
+    background: var(--bg-hover);
+    border-color: var(--accent);
+    color: var(--accent);
+}
+
+.action-btn.history-btn:active:not(:disabled) {
+    transform: scale(0.98);
+}
+
+.action-btn.history-btn:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+}
+
 /* ============================================
    COLOR PICKER
    ============================================ */
@@ -743,49 +783,101 @@ body::before {
 
 /* Solver Actions */
 .solver-actions {
-    padding: var(--space-3) var(--space-4);
+    padding: var(--space-4);
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-3);
 }
 
 .action-buttons-row {
     display: flex;
-    gap: var(--space-2);
-    margin-bottom: var(--space-2);
+    gap: var(--space-3);
 }
 
 .action-btn.undo-paint {
-    flex: 0 0 48px;
+    flex: 0 0 52px;
+    height: 52px;
     background: var(--bg-elevated);
     border: 1px solid var(--bg-hover);
+    border-radius: var(--radius-md);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.2rem;
+    transition: all 0.2s var(--ease-out);
 }
 
 .action-btn.undo-paint:hover {
     background: var(--bg-hover);
     border-color: var(--accent);
+    color: var(--accent);
+    transform: scale(1.05);
+}
+
+.action-btn.undo-paint:active {
+    transform: scale(0.95);
 }
 
 .action-btn.primary-solve {
     flex: 1;
-    background: linear-gradient(135deg, var(--accent) 0%, var(--accent-soft) 100%);
+    height: 52px;
+    background: linear-gradient(135deg, var(--accent) 0%, #d4943f 100%);
     color: var(--bg-deep);
-    font-weight: 600;
-    box-shadow: 0 4px 16px rgba(232, 165, 75, 0.3);
+    font-weight: 700;
+    font-size: 1rem;
+    border-radius: var(--radius-md);
+    box-shadow: 
+        0 4px 16px rgba(232, 165, 75, 0.35),
+        inset 0 1px 0 rgba(255, 255, 255, 0.2);
+    transition: all 0.2s var(--ease-out);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: var(--space-2);
+}
+
+.action-btn.primary-solve .btn-icon {
+    font-size: 1.1rem;
 }
 
 .action-btn.primary-solve:hover {
-    transform: translateY(-1px);
-    box-shadow: 0 6px 20px rgba(232, 165, 75, 0.4);
+    transform: translateY(-2px);
+    box-shadow: 
+        0 8px 24px rgba(232, 165, 75, 0.45),
+        inset 0 1px 0 rgba(255, 255, 255, 0.3);
+}
+
+.action-btn.primary-solve:active {
+    transform: translateY(0);
+    box-shadow: 0 2px 8px rgba(232, 165, 75, 0.3);
 }
 
 .action-btn.reset-solver {
-    margin-top: 0;
-    background: transparent;
+    height: 44px;
+    background: var(--bg-elevated);
     border: 1px solid var(--bg-hover);
+    border-radius: var(--radius-md);
+    color: var(--text-secondary);
+    font-size: 0.85rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: var(--space-2);
+    transition: all 0.2s var(--ease-out);
+}
+
+.action-btn.reset-solver .btn-icon {
+    font-size: 1rem;
 }
 
 .action-btn.reset-solver:hover {
-    background: rgba(201, 74, 74, 0.1);
+    background: rgba(201, 74, 74, 0.15);
     border-color: var(--error);
     color: var(--error);
+}
+
+.action-btn.reset-solver:active {
+    background: rgba(201, 74, 74, 0.25);
 }
 
 /* Solution Display */
@@ -1364,12 +1456,21 @@ body::before {
     }
     
     .header {
-        padding: var(--space-3) var(--space-4);
-        position: relative;
+        padding: var(--space-2) var(--space-3);
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        z-index: 50;
+        background: var(--bg-card);
+        border-bottom: none;
+        height: 48px;
+        display: flex;
+        align-items: center;
     }
     
     .logo h1 {
-        font-size: 0.933rem;
+        font-size: 0.9rem;
     }
     
     /* Hide desktop nav on mobile */
@@ -1383,47 +1484,68 @@ body::before {
         justify-content: space-around;
     }
     
+    /* Main content with fixed cube viewport */
     .main-content {
-        padding: var(--space-3);
-        padding-bottom: calc(80px + var(--safe-bottom));
-        gap: var(--space-3);
+        flex-direction: column;
+        padding: 0;
+        padding-top: 48px; /* Exact header height */
+        padding-bottom: calc(70px + var(--safe-bottom)); /* Space for mobile nav */
+        gap: 0;
+        min-height: 100vh;
     }
     
-    /* Cube takes more vertical space on mobile */
+    /* FIXED CUBE VIEWPORT - Always visible on mobile */
     .cube-viewport {
-        min-height: 42vh;
-        max-height: 48vh;
-        border-radius: var(--radius-lg);
+        position: fixed;
+        top: 48px; /* Exactly below header */
+        left: 0;
+        right: 0;
+        height: 38vh;
+        min-height: 180px;
+        max-height: 280px;
+        z-index: 40;
+        border-radius: 0;
         overflow: hidden;
+        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
     }
     
     #cube-container {
-        min-height: 42vh;
-        max-height: 48vh;
-        border-radius: var(--radius-lg);
+        height: 100%;
+        min-height: unset;
+        max-height: unset;
+        border-radius: 0;
     }
     
     /* Better touch viewport info */
     .viewport-info {
-        bottom: var(--space-3);
+        bottom: var(--space-2);
     }
     
     .info-badge {
-        font-size: 0.7rem;
+        font-size: 0.65rem;
         padding: var(--space-1) var(--space-2);
     }
     
+    /* SCROLLABLE SIDEBAR - Below the fixed viewport */
     .sidebar {
         width: 100%;
+        margin-top: calc(38vh + 48px); /* Push below fixed header + viewport */
+        min-height: calc(62vh - 70px); /* Fill remaining space minus nav */
+        padding-bottom: var(--space-4);
     }
     
     .panel {
-        border-radius: var(--radius-md);
+        border-radius: 0;
+        border-top: 1px solid var(--bg-elevated);
     }
     
     .panel-title {
         padding: var(--space-3);
         font-size: 0.75rem;
+        position: sticky;
+        top: 0;
+        background: var(--bg-card);
+        z-index: 5;
     }
     
     .control-section {
