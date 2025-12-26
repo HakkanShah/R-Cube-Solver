@@ -1500,13 +1500,13 @@ body::before {
         top: 48px; /* Exactly below header */
         left: 0;
         right: 0;
-        height: 38vh;
-        min-height: 180px;
-        max-height: 280px;
+        height: 240px; /* Fixed height for consistent layout */
+        min-height: unset;
+        max-height: unset;
         z-index: 40;
         border-radius: 0;
         overflow: hidden;
-        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
+        box-shadow: 0 4px 16px rgba(0, 0, 0, 0.5);
     }
     
     #cube-container {
@@ -1526,11 +1526,11 @@ body::before {
         padding: var(--space-1) var(--space-2);
     }
     
-    /* SCROLLABLE SIDEBAR - Below the fixed viewport */
+    /* SCROLLABLE SIDEBAR - Directly below viewport */
     .sidebar {
         width: 100%;
-        margin-top: calc(38vh + 48px); /* Push below fixed header + viewport */
-        min-height: calc(62vh - 70px); /* Fill remaining space minus nav */
+        margin-top: 288px; /* header (48px) + viewport (240px) = 288px */
+        min-height: auto;
         padding-bottom: var(--space-4);
     }
     

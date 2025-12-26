@@ -22,14 +22,15 @@ export class CubeRenderer {
         this.gizmoCamera = null;
         this.gizmoSize = 130; // pixels
 
-        // Color mapping - Vibrant bright colors
+        // Color mapping - Bold, distinct colors
+        // Yellow is pure bright, Orange is deep red-orange for clear distinction
         this.colors = {
             'W': 0xffffff,  // Pure white
-            'Y': 0xffcc00,  // Bright yellow
-            'R': 0xff3333,  // Bright red
-            'O': 0xff8c00,  // Bright orange
-            'B': 0x0066ff,  // Bright blue
-            'G': 0x00cc44,  // Bright green
+            'Y': 0xffdd00,  // Pure bright yellow (more golden)
+            'R': 0xdc143c,  // Crimson red
+            'O': 0xff4500,  // OrangeRed - clearly distinct from yellow
+            'B': 0x0051ba,  // Deep royal blue
+            'G': 0x009b48,  // Classic Rubik's green
             'X': 0x1a1a1a,  // Internal (dark)
             'U': 0x0a0a0a   // Unpainted (black)
         };
