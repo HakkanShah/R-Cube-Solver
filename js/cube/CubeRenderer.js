@@ -468,6 +468,21 @@ export class CubeRenderer {
         this.animationQueue = [];
         this.isAnimating = false;
         this.buildCube(unpainted);
+
+        // Reset camera to default position for consistent viewport
+        this.resetCamera();
+    }
+
+    resetCamera() {
+        // Reset camera to default position
+        this.camera.position.set(5, 4, 6);
+        this.camera.lookAt(0, 0, 0);
+
+        // Reset orbit controls
+        if (this.controls) {
+            this.controls.target.set(0, 0, 0);
+            this.controls.update();
+        }
     }
 
     animate() {
@@ -605,16 +620,19 @@ export class CubeRenderer {
         // Get the inverse of camera rotation so gizmo shows absolute orientation
         this.gizmoGroup.quaternion.copy(this.camera.quaternion).invert();
 
-        // Set viewport for gizmo (top-left corner)
-        const size = this.gizmoSize;
-        const padding = 15;
+        // Responsive gizmo size and position
+        const isMobile = this.container.clientWidth < 640;
+        const size = isMobile ? 80 : this.gizmoSize; // Smaller on mobile
+        const padding = isMobile ? 8 : 15;
+
+        // Position at top-left corner (topY is distance from bottom of canvas)
         const topY = this.container.clientHeight - size - padding;
 
         // Save current state
         const currentAutoClear = this.renderer.autoClear;
         this.renderer.autoClear = false;
 
-        // Set viewport and scissor for gizmo area
+        // Set viewport and scissor for gizmo area (top-left corner)
         this.renderer.setViewport(padding, topY, size, size);
         this.renderer.setScissor(padding, topY, size, size);
         this.renderer.setScissorTest(true);

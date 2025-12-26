@@ -166,7 +166,10 @@
 
                 <!-- Solver Panel -->
                 <div class="panel solver-panel" id="solver-panel">
-                    <h2 class="panel-title">Solve Your Cube</h2>
+                    <h2 class="panel-title">
+                        <span class="title-icon">🧩</span>
+                        Solve Your Cube
+                    </h2>
                     
                     <div class="solver-instructions">
                         <p class="instructions-text">
@@ -178,36 +181,44 @@
                     
                     <div class="control-section">
                         <h3>Select Color</h3>
-                        <div class="color-picker">
-                            <button class="color-swatch active" data-color="W" style="--swatch-color: #f5f0e8" title="White"></button>
-                            <button class="color-swatch" data-color="Y" style="--swatch-color: #f0c75e" title="Yellow"></button>
-                            <button class="color-swatch" data-color="R" style="--swatch-color: #c94a4a" title="Red"></button>
-                            <button class="color-swatch" data-color="O" style="--swatch-color: #d97b3d" title="Orange"></button>
-                            <button class="color-swatch" data-color="B" style="--swatch-color: #4a7dc9" title="Blue"></button>
-                            <button class="color-swatch" data-color="G" style="--swatch-color: #4aab6b" title="Green"></button>
+                        <div class="color-picker-enhanced">
+                            <button class="color-swatch-enhanced active" data-color="W" style="--swatch-color: #ffffff" title="White">
+                                <span class="swatch-count">0</span>
+                            </button>
+                            <button class="color-swatch-enhanced" data-color="Y" style="--swatch-color: #ffcc00" title="Yellow">
+                                <span class="swatch-count">0</span>
+                            </button>
+                            <button class="color-swatch-enhanced" data-color="R" style="--swatch-color: #ff3333" title="Red">
+                                <span class="swatch-count">0</span>
+                            </button>
+                            <button class="color-swatch-enhanced" data-color="O" style="--swatch-color: #ff8c00" title="Orange">
+                                <span class="swatch-count">0</span>
+                            </button>
+                            <button class="color-swatch-enhanced" data-color="B" style="--swatch-color: #0066ff" title="Blue">
+                                <span class="swatch-count">0</span>
+                            </button>
+                            <button class="color-swatch-enhanced" data-color="G" style="--swatch-color: #00cc44" title="Green">
+                                <span class="swatch-count">0</span>
+                            </button>
                         </div>
                     </div>
 
-                    <div class="control-section">
-                        <h3>Color Count (need 9 each)</h3>
-                        <div class="color-counts" id="color-counts">
-                            <div class="color-count" data-color="W"><span class="count-swatch" style="background: #f5f0e8"></span><span class="count-value">0</span>/9</div>
-                            <div class="color-count" data-color="Y"><span class="count-swatch" style="background: #f0c75e"></span><span class="count-value">0</span>/9</div>
-                            <div class="color-count" data-color="R"><span class="count-swatch" style="background: #c94a4a"></span><span class="count-value">0</span>/9</div>
-                            <div class="color-count" data-color="O"><span class="count-swatch" style="background: #d97b3d"></span><span class="count-value">0</span>/9</div>
-                            <div class="color-count" data-color="B"><span class="count-swatch" style="background: #4a7dc9"></span><span class="count-value">0</span>/9</div>
-                            <div class="color-count" data-color="G"><span class="count-swatch" style="background: #4aab6b"></span><span class="count-value">0</span>/9</div>
+                    <div class="control-section status-section">
+                        <div class="solver-status-container">
+                            <div class="status-indicator" id="status-indicator"></div>
+                            <p class="solver-status" id="solver-status">Click stickers on the cube to paint</p>
+                        </div>
+                        <div class="paint-progress">
+                            <div class="paint-progress-bar" id="paint-progress-bar"></div>
                         </div>
                     </div>
 
-                    <div class="control-section">
-                        <p class="solver-status" id="solver-status">Click stickers on the cube to paint</p>
-                    </div>
-
-
-                    <div class="control-section">
-                        <div class="action-buttons">
-                            <button class="action-btn solve" id="solve-btn">
+                    <div class="control-section solver-actions">
+                        <div class="action-buttons-row">
+                            <button class="action-btn undo-paint" id="undo-paint-btn" title="Undo last paint">
+                                <span class="btn-icon">↩</span>
+                            </button>
+                            <button class="action-btn solve primary-solve" id="solve-btn">
                                 <span class="btn-icon">✨</span> Solve My Cube
                             </button>
                         </div>
@@ -217,16 +228,26 @@
                     </div>
 
                     <div class="solution-display" id="solution-display">
-                        <h3>Solution</h3>
+                        <div class="solution-header">
+                            <h3>Solution</h3>
+                            <span class="move-count" id="move-count"></span>
+                        </div>
+                        
+                        <!-- Phase-grouped solution display -->
+                        <div class="solution-phases-container" id="solution-phases-container" style="display: none;">
+                            <!-- Populated dynamically -->
+                        </div>
+                        
                         <div class="solution-moves" id="solution-moves">
                             <span class="placeholder">Paint your cube state above, then click Solve</span>
                         </div>
+                        
                         <div class="solution-controls" id="solution-controls" style="display: none;">
-                            <button class="action-btn" id="play-solution">
+                            <button class="action-btn play-btn" id="play-solution">
                                 <span class="btn-icon">▶</span> Play All
                             </button>
-                            <button class="action-btn" id="step-solution">
-                                <span class="btn-icon">→</span> Step
+                            <button class="action-btn step-btn" id="step-solution">
+                                <span class="btn-icon">⏭</span> Step
                             </button>
                         </div>
                     </div>

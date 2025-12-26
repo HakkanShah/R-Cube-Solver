@@ -1,4 +1,4 @@
-// main.js - Application with Paint Validation Feedback
+// main.js - Enhanced Application with Phase-based Solving and Paint History
 
 import { CubeState } from './cube/CubeState.js';
 import { CubeRenderer } from './cube/CubeRenderer.js';
@@ -15,7 +15,10 @@ class RubiksCubeApp {
         this.solver = null;
         this.currentTab = 'play';
         this.currentSolution = [];
+        this.currentPhases = [];
         this.solutionIndex = 0;
+        this.paintHistory = [];
+        this.currentPhaseIndex = 0;
 
         this.init();
     }
@@ -70,18 +73,28 @@ class RubiksCubeApp {
             activePanel.classList.add('active');
         }
 
+        // Ensure viewport is properly sized after tab switch
+        setTimeout(() => {
+            this.renderer.onResize();
+        }, 50);
+
         if (tabName === 'solver') {
             this.renderer.resetCube(true);
             this.renderer.enablePaintMode(this.getSelectedColor(), (face, idx, color, error) => {
                 this.onPaintSticker(face, idx, color, error);
             });
+            this.paintHistory = [];
             this.updateColorCounts();
-            this.updateSolverStatus('Click stickers on the cube to paint your current state');
+            this.updateSolverStatus('Click stickers on the cube to paint your current state', 'painting');
+            this.resetPhaseIndicators();
         } else {
             this.renderer.disablePaintMode();
             if (previousTab === 'solver') {
                 this.cubeState.reset();
                 this.renderer.resetCube(false);
+            } else {
+                // Reset camera for consistent positioning even when not resetting cube
+                this.renderer.resetCamera();
             }
         }
 
@@ -89,7 +102,7 @@ class RubiksCubeApp {
     }
 
     getSelectedColor() {
-        const active = document.querySelector('.color-swatch.active');
+        const active = document.querySelector('.color-swatch-enhanced.active');
         return active ? active.dataset.color : 'W';
     }
 
@@ -115,14 +128,31 @@ class RubiksCubeApp {
         const resetInputBtn = document.getElementById('reset-input-btn');
         const playSolutionBtn = document.getElementById('play-solution');
         const stepSolutionBtn = document.getElementById('step-solution');
+        const undoPaintBtn = document.getElementById('undo-paint-btn');
 
-        document.querySelectorAll('.color-swatch').forEach(swatch => {
+        // Enhanced color picker with counts
+        document.querySelectorAll('.color-swatch-enhanced').forEach(swatch => {
             swatch.addEventListener('click', (e) => {
-                document.querySelectorAll('.color-swatch').forEach(s => s.classList.remove('active'));
-                e.target.classList.add('active');
-                const color = e.target.dataset.color;
+                document.querySelectorAll('.color-swatch-enhanced').forEach(s => s.classList.remove('active'));
+                e.currentTarget.classList.add('active');
+                const color = e.currentTarget.dataset.color;
                 this.renderer.setSelectedColor(color);
             });
+        });
+
+        // Keyboard shortcuts for colors (1-6)
+        document.addEventListener('keydown', (e) => {
+            if (this.currentTab !== 'solver') return;
+            if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
+
+            const colorKeys = { '1': 'W', '2': 'Y', '3': 'R', '4': 'O', '5': 'B', '6': 'G' };
+            if (colorKeys[e.key]) {
+                const color = colorKeys[e.key];
+                document.querySelectorAll('.color-swatch-enhanced').forEach(s => {
+                    s.classList.toggle('active', s.dataset.color === color);
+                });
+                this.renderer.setSelectedColor(color);
+            }
         });
 
         if (solveBtn) {
@@ -135,10 +165,16 @@ class RubiksCubeApp {
                 this.renderer.enablePaintMode(this.getSelectedColor(), (face, idx, color, error) => {
                     this.onPaintSticker(face, idx, color, error);
                 });
+                this.paintHistory = [];
                 this.clearSolution();
                 this.updateColorCounts();
-                this.updateSolverStatus('Cube reset. Paint your cube state.');
+                this.updateSolverStatus('Cube reset. Paint your cube state.', 'painting');
+                this.resetPhaseIndicators();
             });
+        }
+
+        if (undoPaintBtn) {
+            undoPaintBtn.addEventListener('click', () => this.undoPaint());
         }
 
         if (playSolutionBtn) {
@@ -150,12 +186,87 @@ class RubiksCubeApp {
         }
     }
 
+    undoPaint() {
+        if (this.paintHistory.length === 0) {
+            this.showToast('Nothing to undo', 'warning');
+            return;
+        }
+
+        const lastPaint = this.paintHistory.pop();
+
+        // Restore the previous color
+        const paintState = this.renderer.getPaintState();
+        paintState[lastPaint.face][lastPaint.index] = lastPaint.previousColor;
+
+        // We need to rebuild the cube visually - for now just update the renderer's internal state
+        // and trigger a visual update
+        this.renderer.paintState[lastPaint.face][lastPaint.index] = lastPaint.previousColor;
+
+        // Update the cubie color visually
+        this.renderer.cubies.forEach(cubie => {
+            const { x, y, z } = cubie.userData;
+            const faceInfo = this.getFaceFromPosition(lastPaint.face, lastPaint.index, x, y, z);
+            if (faceInfo.matches) {
+                cubie.material[faceInfo.materialIndex].color.setHex(this.renderer.colors[lastPaint.previousColor]);
+            }
+        });
+
+        this.updateColorCounts();
+
+        if (navigator.vibrate) {
+            navigator.vibrate(10);
+        }
+    }
+
+    getFaceFromPosition(face, stickerIdx, x, y, z) {
+        // Convert sticker index to row/col
+        const row = Math.floor(stickerIdx / 3);
+        const col = stickerIdx % 3;
+
+        // Check if this cubie has this face
+        const facePositions = {
+            'U': { axis: 'y', value: 1, materialIndex: 2 },
+            'D': { axis: 'y', value: -1, materialIndex: 3 },
+            'R': { axis: 'x', value: 1, materialIndex: 0 },
+            'L': { axis: 'x', value: -1, materialIndex: 1 },
+            'F': { axis: 'z', value: 1, materialIndex: 4 },
+            'B': { axis: 'z', value: -1, materialIndex: 5 }
+        };
+
+        const pos = facePositions[face];
+        const coords = { x, y, z };
+
+        if (coords[pos.axis] !== pos.value) {
+            return { matches: false };
+        }
+
+        // Check row/col match
+        const cubieRow = face === 'U' ? z + 1 : face === 'D' ? 1 - z : 1 - y;
+        const cubieCol = face === 'R' ? 1 - z : face === 'L' ? z + 1 :
+            face === 'B' ? 1 - x : x + 1;
+
+        if (cubieRow === row && cubieCol === col) {
+            return { matches: true, materialIndex: pos.materialIndex };
+        }
+
+        return { matches: false };
+    }
+
     onPaintSticker(face, index, color, error) {
         if (error) {
-            // Show paint validation error as toast
             this.showToast(error, 'warning');
-            // Haptic feedback already handled in showToast
-        } else {
+        } else if (color) {
+            // Get the previous color for undo
+            const previousColor = this.paintHistory.length > 0 ?
+                'U' : 'U'; // Default to unpainted
+
+            this.paintHistory.push({
+                face,
+                index,
+                color,
+                previousColor: 'U' // Store previous color
+            });
+
             this.updateColorCounts();
         }
     }
@@ -164,46 +275,80 @@ class RubiksCubeApp {
         const counts = this.renderer.getColorCounts();
         let totalPainted = 0;
 
-        // Update UI
+        // Update enhanced color picker counts
         Object.entries(counts).forEach(([color, count]) => {
             totalPainted += count;
 
-            const el = document.querySelector(`.color-count[data-color="${color}"]`);
-            if (el) {
-                const valueEl = el.querySelector('.count-value');
-                if (valueEl) {
-                    valueEl.textContent = count;
+            const swatch = document.querySelector(`.color-swatch-enhanced[data-color="${color}"]`);
+            if (swatch) {
+                const countEl = swatch.querySelector('.swatch-count');
+                if (countEl) {
+                    countEl.textContent = count;
                 }
 
-                el.classList.remove('complete', 'overflow');
+                swatch.classList.remove('complete', 'overflow');
                 if (count === 9) {
-                    el.classList.add('complete');
+                    swatch.classList.add('complete');
                 } else if (count > 9) {
-                    el.classList.add('overflow');
+                    swatch.classList.add('overflow');
                 }
             }
         });
 
-        // Update status - keep progress inline, warnings as toast
+        // Update progress bar
+        const progressBar = document.getElementById('paint-progress-bar');
+        if (progressBar) {
+            const percentage = (totalPainted / 54) * 100;
+            progressBar.style.width = `${percentage}%`;
+        }
+
+        // Update status based on state
         const allComplete = Object.values(counts).every(c => c === 9);
         const hasOverflow = Object.values(counts).some(c => c > 9);
 
         if (hasOverflow) {
-            // Show warning as toast, but keep inline status as progress
             this.showToast('Too many of one color! Check color counts.', 'warning');
-            this.updateSolverStatus(`Painted ${totalPainted}/54 stickers`);
+            this.updateSolverStatus(`Painted ${totalPainted}/54 stickers`, 'painting');
         } else if (allComplete) {
-            this.updateSolverStatus('✓ All colors correct! Click "Solve My Cube"');
+            this.updateSolverStatus('✓ All colors complete! Click "Solve My Cube"', 'ready');
         } else {
-            this.updateSolverStatus(`Painted ${totalPainted}/54 stickers`);
+            this.updateSolverStatus(`Painted ${totalPainted}/54 stickers`, 'painting');
         }
     }
 
-    updateSolverStatus(message) {
+    updateSolverStatus(message, state = '') {
         const statusEl = document.getElementById('solver-status');
+        const indicatorEl = document.getElementById('status-indicator');
+
         if (statusEl) {
             statusEl.textContent = message;
         }
+
+        if (indicatorEl) {
+            indicatorEl.className = 'status-indicator';
+            if (state) {
+                indicatorEl.classList.add(state);
+            }
+        }
+    }
+
+    resetPhaseIndicators() {
+        document.querySelectorAll('.phase-step').forEach(step => {
+            step.classList.remove('active', 'complete');
+        });
+    }
+
+    updatePhaseIndicator(phaseIndex, state = 'active') {
+        const phases = ['cross', 'f2l', 'oll', 'pll'];
+
+        document.querySelectorAll('.phase-step').forEach((step, idx) => {
+            step.classList.remove('active');
+            if (idx < phaseIndex) {
+                step.classList.add('complete');
+            } else if (idx === phaseIndex && state === 'active') {
+                step.classList.add('active');
+            }
+        });
     }
 
     async solveCube() {
@@ -233,11 +378,11 @@ class RubiksCubeApp {
         }
 
         if (tempCube.isSolved()) {
-            this.showSolution(['Already solved! 🎉']);
+            this.showSolution(['Already solved! 🎉'], []);
             return;
         }
 
-        this.updateSolverStatus('Calculating solution...');
+        this.updateSolverStatus('Calculating solution...', 'solving');
         await this.delay(100);
 
         // Get paint state and solve
@@ -245,26 +390,69 @@ class RubiksCubeApp {
 
         if (!result.success) {
             this.showSolutionError(result.error || 'Could not find solution.');
+            this.updateSolverStatus('Solve failed - check cube state', 'painting');
             return;
         }
 
         if (result.solution.length === 0) {
-            this.showSolution(['Already solved! 🎉']);
+            this.showSolution(['Already solved! 🎉'], []);
             return;
         }
 
         this.currentSolution = result.solution;
+        this.currentPhases = result.phases || [];
         this.solutionIndex = 0;
+        this.currentPhaseIndex = 0;
 
-        this.showSolution(result.solution);
-        this.updateSolverStatus(`Solution found: ${result.solution.length} moves`);
+        this.showSolution(result.solution, result.phases);
+        this.updateSolverStatus(`Solution found: ${result.solution.length} moves`, 'ready');
+
+        // Activate first phase
+        this.updatePhaseIndicator(0, 'active');
     }
 
-    showSolution(moves) {
+    showSolution(moves, phases = []) {
         const solutionMoves = document.getElementById('solution-moves');
         const solutionControls = document.getElementById('solution-controls');
+        const moveCount = document.getElementById('move-count');
+        const phasesContainer = document.getElementById('solution-phases-container');
 
-        if (solutionMoves) {
+        // Update move count badge
+        if (moveCount) {
+            if (moves.length > 0 && !moves[0].includes('🎉')) {
+                moveCount.textContent = `${moves.length} moves`;
+                moveCount.style.display = 'inline';
+            } else {
+                moveCount.style.display = 'none';
+            }
+        }
+
+        // Show phase-grouped solution if phases available
+        if (phases && phases.length > 0 && phasesContainer) {
+            phasesContainer.style.display = 'flex';
+            phasesContainer.innerHTML = phases.map((phase, idx) => `
+                <div class="solution-phase" data-phase-idx="${idx}">
+                    <div class="phase-header">
+                        <span class="phase-icon">${phase.icon}</span>
+                        <span class="phase-title">${phase.name}</span>
+                        <span class="phase-move-count">${phase.moves.length} moves</span>
+                    </div>
+                    <div class="phase-moves">
+                        ${phase.moves.map((m, mIdx) =>
+                `<span class="solution-move" data-move-idx="${mIdx}">${m}</span>`
+            ).join('')}
+                    </div>
+                </div>
+            `).join('');
+
+            // Hide simple moves display
+            if (solutionMoves) {
+                solutionMoves.style.display = 'none';
+            }
+        } else if (solutionMoves) {
+            if (phasesContainer) phasesContainer.style.display = 'none';
+            solutionMoves.style.display = 'block';
+
             if (typeof moves[0] === 'string' && moves[0].includes('🎉')) {
                 solutionMoves.innerHTML = `<span class="success-message">${moves[0]}</span>`;
             } else {
@@ -300,14 +488,12 @@ class RubiksCubeApp {
 
         container.appendChild(toast);
 
-        // Auto-remove after 3 seconds
         setTimeout(() => {
             if (toast.parentElement) {
                 toast.remove();
             }
         }, 3000);
 
-        // Haptic feedback on mobile
         if (navigator.vibrate && type === 'error') {
             navigator.vibrate([100, 50, 100]);
         }
@@ -316,8 +502,11 @@ class RubiksCubeApp {
     clearSolution() {
         const solutionMoves = document.getElementById('solution-moves');
         const solutionControls = document.getElementById('solution-controls');
+        const phasesContainer = document.getElementById('solution-phases-container');
+        const moveCount = document.getElementById('move-count');
 
         if (solutionMoves) {
+            solutionMoves.style.display = 'block';
             solutionMoves.innerHTML = '<span class="placeholder">Paint your cube state, then click Solve</span>';
         }
 
@@ -325,8 +514,19 @@ class RubiksCubeApp {
             solutionControls.style.display = 'none';
         }
 
+        if (phasesContainer) {
+            phasesContainer.style.display = 'none';
+            phasesContainer.innerHTML = '';
+        }
+
+        if (moveCount) {
+            moveCount.style.display = 'none';
+        }
+
         this.currentSolution = [];
+        this.currentPhases = [];
         this.solutionIndex = 0;
+        this.currentPhaseIndex = 0;
     }
 
     async playSolution() {
@@ -340,16 +540,51 @@ class RubiksCubeApp {
             playBtn.innerHTML = '<span class="btn-icon">⏳</span> Playing...';
         }
 
-        for (let i = this.solutionIndex; i < this.currentSolution.length; i++) {
-            const move = this.currentSolution[i];
-            this.highlightSolutionMove(i);
-            await this.renderer.animateMove(move, 350);
-            this.markSolutionMoveDone(i);
-            await this.delay(50);
+        // Track which phase we're in for visual feedback
+        let moveCounter = 0;
+
+        for (let phaseIdx = 0; phaseIdx < this.currentPhases.length; phaseIdx++) {
+            const phase = this.currentPhases[phaseIdx];
+            this.updatePhaseIndicator(phaseIdx, 'active');
+
+            // Mark phase as active in solution display
+            document.querySelectorAll('.solution-phase').forEach((el, idx) => {
+                el.classList.remove('active');
+                if (idx < phaseIdx) el.classList.add('complete');
+                if (idx === phaseIdx) el.classList.add('active');
+            });
+
+            for (let i = 0; i < phase.moves.length; i++) {
+                const move = phase.moves[i];
+
+                // Highlight current move
+                const phaseEl = document.querySelector(`.solution-phase[data-phase-idx="${phaseIdx}"]`);
+                if (phaseEl) {
+                    const moveEls = phaseEl.querySelectorAll('.solution-move');
+                    moveEls.forEach((el, idx) => {
+                        el.classList.remove('current');
+                        if (idx < i) el.classList.add('done');
+                        if (idx === i) el.classList.add('current');
+                    });
+                }
+
+                await this.renderer.animateMove(move, 300);
+                moveCounter++;
+                await this.delay(30);
+            }
+
+            // Mark phase complete
+            this.updatePhaseIndicator(phaseIdx + 1, 'active');
         }
 
         this.solutionIndex = this.currentSolution.length;
-        this.updateSolverStatus('Solution complete! 🎉');
+        this.updateSolverStatus('Solution complete! 🎉', 'ready');
+
+        // Mark all phases complete
+        document.querySelectorAll('.phase-step').forEach(step => {
+            step.classList.remove('active');
+            step.classList.add('complete');
+        });
 
         if (playBtn) {
             playBtn.disabled = false;
@@ -360,7 +595,7 @@ class RubiksCubeApp {
     async stepSolution() {
         if (!this.currentSolution || this.solutionIndex >= this.currentSolution.length) {
             if (this.currentSolution && this.solutionIndex >= this.currentSolution.length) {
-                this.updateSolverStatus('Solution complete!');
+                this.updateSolverStatus('Solution complete!', 'ready');
             }
             return;
         }
@@ -368,14 +603,56 @@ class RubiksCubeApp {
         this.renderer.disablePaintMode();
 
         const move = this.currentSolution[this.solutionIndex];
-        this.highlightSolutionMove(this.solutionIndex);
-        await this.renderer.animateMove(move, 400);
-        this.markSolutionMoveDone(this.solutionIndex);
+
+        // Find which phase this move belongs to
+        let totalMoves = 0;
+        for (let pIdx = 0; pIdx < this.currentPhases.length; pIdx++) {
+            const phase = this.currentPhases[pIdx];
+            const phaseEnd = totalMoves + phase.moves.length;
+
+            if (this.solutionIndex < phaseEnd) {
+                const moveInPhase = this.solutionIndex - totalMoves;
+
+                // Update phase indicator
+                this.updatePhaseIndicator(pIdx, 'active');
+
+                // Highlight in phase display
+                const phaseEl = document.querySelector(`.solution-phase[data-phase-idx="${pIdx}"]`);
+                if (phaseEl) {
+                    const moveEls = phaseEl.querySelectorAll('.solution-move');
+                    moveEls.forEach((el, idx) => {
+                        el.classList.remove('current', 'done');
+                        if (idx < moveInPhase) el.classList.add('done');
+                        if (idx === moveInPhase) el.classList.add('current');
+                    });
+                }
+
+                // Mark previous phases complete
+                document.querySelectorAll('.solution-phase').forEach((el, idx) => {
+                    el.classList.remove('active');
+                    if (idx < pIdx) el.classList.add('complete');
+                    if (idx === pIdx) el.classList.add('active');
+                });
+
+                break;
+            }
+            totalMoves = phaseEnd;
+        }
+
+        await this.renderer.animateMove(move, 350);
 
         this.solutionIndex++;
 
         const remaining = this.currentSolution.length - this.solutionIndex;
-        this.updateSolverStatus(`${remaining} moves remaining`);
+        if (remaining > 0) {
+            this.updateSolverStatus(`${remaining} moves remaining`, 'solving');
+        } else {
+            this.updateSolverStatus('Solution complete! 🎉', 'ready');
+            document.querySelectorAll('.phase-step').forEach(step => {
+                step.classList.remove('active');
+                step.classList.add('complete');
+            });
+        }
     }
 
     highlightSolutionMove(index) {

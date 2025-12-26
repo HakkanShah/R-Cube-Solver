@@ -497,12 +497,89 @@ body::before {
 }
 
 /* ============================================
-   SOLVER
+   SOLVER - ENHANCED DESIGN
    ============================================ */
 
+/* Glassmorphism Solver Panel */
+.solver-panel {
+    background: linear-gradient(135deg, 
+        rgba(31, 29, 27, 0.98) 0%, 
+        rgba(40, 37, 35, 0.95) 100%);
+    backdrop-filter: blur(20px);
+    border: 1px solid rgba(232, 165, 75, 0.15);
+    box-shadow: 
+        0 8px 32px rgba(0, 0, 0, 0.3),
+        inset 0 1px 0 rgba(255, 255, 255, 0.05);
+}
+
+.solver-panel .panel-title {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+    background: linear-gradient(135deg, var(--bg-elevated) 0%, var(--bg-card) 100%);
+}
+
+.title-icon {
+    font-size: 1.1rem;
+}
+
+/* Solving Phases Progress */
+.solve-phases {
+    display: flex;
+    gap: 4px;
+    padding: var(--space-3) var(--space-4);
+    background: rgba(23, 22, 21, 0.6);
+    border-bottom: 1px solid var(--bg-elevated);
+}
+
+.phase-step {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+    padding: var(--space-2) var(--space-1);
+    border-radius: var(--radius-sm);
+    background: var(--bg-elevated);
+    transition: all 0.3s var(--ease-out);
+    opacity: 0.5;
+}
+
+.phase-step:hover {
+    opacity: 0.7;
+}
+
+.phase-step.active {
+    background: linear-gradient(135deg, var(--accent) 0%, var(--accent-soft) 100%);
+    color: var(--bg-deep);
+    opacity: 1;
+    transform: scale(1.02);
+    box-shadow: 0 4px 12px rgba(232, 165, 75, 0.3);
+}
+
+.phase-step.complete {
+    background: linear-gradient(135deg, var(--success) 0%, #3d9b5e 100%);
+    color: white;
+    opacity: 1;
+}
+
+.phase-icon {
+    font-size: 1rem;
+}
+
+.phase-label {
+    font-size: 0.6rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+}
+
+/* Solver Instructions */
 .solver-instructions {
     padding: var(--space-4);
-    background: var(--accent-muted);
+    background: linear-gradient(135deg, 
+        rgba(232, 165, 75, 0.08) 0%, 
+        rgba(232, 165, 75, 0.04) 100%);
     border-bottom: 1px solid var(--bg-elevated);
 }
 
@@ -514,68 +591,293 @@ body::before {
 
 .instructions-text strong {
     color: var(--accent);
+    font-weight: 600;
+}
+
+/* Enhanced Color Picker with Counts */
+.color-picker-enhanced {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: var(--space-3);
+}
+
+.color-swatch-enhanced {
+    aspect-ratio: 1;
+    min-height: 48px;
+    border-radius: var(--radius-md);
+    border: 3px solid transparent;
+    background: var(--swatch-color);
+    cursor: pointer;
+    position: relative;
+    transition: all 0.2s var(--ease-out);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 
+        0 2px 8px rgba(0, 0, 0, 0.2),
+        inset 0 1px 0 rgba(255, 255, 255, 0.3);
+}
+
+.color-swatch-enhanced:hover {
+    transform: scale(1.08);
+    box-shadow: 
+        0 4px 16px rgba(0, 0, 0, 0.3),
+        inset 0 1px 0 rgba(255, 255, 255, 0.3);
+}
+
+.color-swatch-enhanced::before {
+    content: '';
+    position: absolute;
+    inset: -5px;
+    border-radius: calc(var(--radius-md) + 3px);
+    border: 2px solid var(--accent);
+    opacity: 0;
+    transform: scale(0.9);
+    transition: all 0.2s var(--ease-out);
+}
+
+.color-swatch-enhanced.active::before {
+    opacity: 1;
+    transform: scale(1);
+}
+
+.color-swatch-enhanced.active {
+    border-color: var(--text-primary);
+}
+
+.swatch-count {
+    font-family: var(--font-mono);
+    font-size: 0.75rem;
+    font-weight: 700;
+    color: var(--bg-deep);
+    text-shadow: 0 1px 2px rgba(255,255,255,0.3);
+    opacity: 0.9;
+}
+
+.color-swatch-enhanced[data-color="W"] .swatch-count,
+.color-swatch-enhanced[data-color="Y"] .swatch-count {
+    color: #333;
+}
+
+.color-swatch-enhanced.complete {
+    box-shadow: 
+        0 0 0 2px var(--success),
+        0 4px 12px rgba(74, 171, 107, 0.4);
+}
+
+.color-swatch-enhanced.overflow {
+    box-shadow: 
+        0 0 0 2px var(--error),
+        0 4px 12px rgba(201, 74, 74, 0.4);
+    animation: shake 0.4s ease-in-out;
+}
+
+@keyframes shake {
+    0%, 100% { transform: translateX(0); }
+    25% { transform: translateX(-4px); }
+    75% { transform: translateX(4px); }
+}
+
+/* Status Section */
+.status-section {
+    padding: var(--space-3) var(--space-4);
+}
+
+.solver-status-container {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+    margin-bottom: var(--space-2);
+}
+
+.status-indicator {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: var(--text-muted);
+    transition: all 0.3s ease;
+}
+
+.status-indicator.painting {
+    background: var(--accent);
+    box-shadow: 0 0 8px var(--accent);
+}
+
+.status-indicator.ready {
+    background: var(--success);
+    box-shadow: 0 0 8px var(--success);
+    animation: pulse 2s ease-in-out infinite;
+}
+
+.status-indicator.solving {
+    background: var(--accent);
+    animation: pulse 0.5s ease-in-out infinite;
+}
+
+@keyframes pulse {
+    0%, 100% { opacity: 1; transform: scale(1); }
+    50% { opacity: 0.6; transform: scale(0.9); }
 }
 
 .solver-status {
     font-size: 0.867rem;
     color: var(--text-secondary);
-    text-align: center;
-    padding: var(--space-2) 0;
+    margin: 0;
 }
 
-/* Color count display */
-.color-counts {
-    display: grid;
-    grid-template-columns: repeat(3, 1fr);
-    gap: var(--space-2);
+/* Paint Progress Bar */
+.paint-progress {
+    height: 4px;
+    background: var(--bg-elevated);
+    border-radius: 100px;
+    overflow: hidden;
 }
 
-.color-count {
+.paint-progress-bar {
+    height: 100%;
+    background: linear-gradient(90deg, var(--accent) 0%, var(--success) 100%);
+    border-radius: 100px;
+    width: 0%;
+    transition: width 0.3s var(--ease-out);
+}
+
+/* Solver Actions */
+.solver-actions {
+    padding: var(--space-3) var(--space-4);
+}
+
+.action-buttons-row {
     display: flex;
-    align-items: center;
     gap: var(--space-2);
-    padding: var(--space-2);
-    background: var(--bg-main);
-    border-radius: var(--radius-sm);
-    font-size: 0.8rem;
-    font-family: var(--font-mono);
-    color: var(--text-secondary);
+    margin-bottom: var(--space-2);
 }
 
-.color-count.complete {
-    color: var(--success);
-    background: rgba(74, 171, 107, 0.1);
+.action-btn.undo-paint {
+    flex: 0 0 48px;
+    background: var(--bg-elevated);
+    border: 1px solid var(--bg-hover);
 }
 
-.color-count.overflow {
-    color: var(--error);
-    background: rgba(201, 74, 74, 0.1);
+.action-btn.undo-paint:hover {
+    background: var(--bg-hover);
+    border-color: var(--accent);
 }
 
-.count-swatch {
-    width: 16px;
-    height: 16px;
-    border-radius: 3px;
-    flex-shrink: 0;
-}
-
-.count-value {
+.action-btn.primary-solve {
+    flex: 1;
+    background: linear-gradient(135deg, var(--accent) 0%, var(--accent-soft) 100%);
+    color: var(--bg-deep);
     font-weight: 600;
+    box-shadow: 0 4px 16px rgba(232, 165, 75, 0.3);
 }
 
+.action-btn.primary-solve:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 6px 20px rgba(232, 165, 75, 0.4);
+}
 
+.action-btn.reset-solver {
+    margin-top: 0;
+    background: transparent;
+    border: 1px solid var(--bg-hover);
+}
+
+.action-btn.reset-solver:hover {
+    background: rgba(201, 74, 74, 0.1);
+    border-color: var(--error);
+    color: var(--error);
+}
+
+/* Solution Display */
 .solution-display {
     padding: var(--space-4);
-    background: var(--bg-main);
+    background: linear-gradient(180deg, var(--bg-main) 0%, rgba(23, 22, 21, 0.8) 100%);
+    border-top: 1px solid var(--bg-elevated);
 }
 
-.solution-display h3 {
+.solution-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: var(--space-3);
+}
+
+.solution-header h3 {
     font-size: 0.7rem;
     font-weight: 600;
     letter-spacing: 0.05em;
     text-transform: uppercase;
     color: var(--text-muted);
+    margin: 0;
+}
+
+.move-count {
+    font-size: 0.7rem;
+    font-family: var(--font-mono);
+    color: var(--accent);
+    background: var(--accent-muted);
+    padding: 2px 8px;
+    border-radius: 100px;
+}
+
+/* Phase-grouped Solution Container */
+.solution-phases-container {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-2);
     margin-bottom: var(--space-3);
+    max-height: 200px;
+    overflow-y: auto;
+}
+
+.solution-phase {
+    padding: var(--space-3);
+    background: rgba(23, 22, 21, 0.8);
+    border-radius: var(--radius-sm);
+    border-left: 3px solid var(--accent);
+    transition: all 0.3s ease;
+}
+
+.solution-phase.active {
+    border-left-color: var(--success);
+    background: rgba(74, 171, 107, 0.1);
+}
+
+.solution-phase.complete {
+    opacity: 0.6;
+    border-left-color: var(--text-muted);
+}
+
+.phase-header {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+    margin-bottom: var(--space-2);
+}
+
+.phase-header .phase-icon {
+    font-size: 0.9rem;
+}
+
+.phase-title {
+    font-size: 0.7rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    color: var(--accent);
+    letter-spacing: 0.03em;
+}
+
+.phase-move-count {
+    margin-left: auto;
+    font-size: 0.65rem;
+    font-family: var(--font-mono);
+    color: var(--text-muted);
+}
+
+.phase-moves {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px;
 }
 
 .solution-moves {
@@ -598,16 +900,23 @@ body::before {
 
 .solution-move {
     display: inline-block;
-    padding: 2px 6px;
+    padding: 3px 8px;
     margin: 2px;
     background: var(--bg-elevated);
     border-radius: 4px;
-    transition: all var(--duration);
+    transition: all 0.2s var(--ease-out);
+    cursor: default;
+}
+
+.solution-move:hover {
+    background: var(--bg-hover);
 }
 
 .solution-move.current {
-    background: var(--accent);
+    background: linear-gradient(135deg, var(--accent) 0%, var(--accent-soft) 100%);
     color: var(--bg-deep);
+    transform: scale(1.1);
+    box-shadow: 0 2px 8px rgba(232, 165, 75, 0.4);
 }
 
 .solution-move.done {
@@ -618,16 +927,29 @@ body::before {
 
 .success-message {
     color: var(--success);
+    font-weight: 600;
 }
 
 .error-message {
     color: var(--error);
 }
 
+/* Solution Controls */
 .solution-controls {
     display: flex;
     gap: var(--space-2);
     margin-top: var(--space-3);
+}
+
+.action-btn.play-btn {
+    flex: 1;
+    background: linear-gradient(135deg, var(--success) 0%, #3d9b5e 100%);
+    color: white;
+}
+
+.action-btn.step-btn {
+    flex: 1;
+    background: var(--bg-elevated);
 }
 
 /* ============================================
@@ -1148,6 +1470,20 @@ body::before {
     .color-picker {
         gap: var(--space-2);
         justify-content: space-between;
+    }
+    
+    /* Enhanced color picker - 6 columns on mobile (1 row) */
+    .color-picker-enhanced {
+        grid-template-columns: repeat(6, 1fr);
+        gap: var(--space-2);
+    }
+    
+    .color-swatch-enhanced {
+        min-height: 40px;
+    }
+    
+    .swatch-count {
+        font-size: 0.65rem;
     }
     
     /* Compact tutorial on mobile */
