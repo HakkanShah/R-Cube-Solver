@@ -1,4 +1,5 @@
 // Controls.js - UI Controls with Undo/Redo and Mobile Support
+import soundManager from '../audio/SoundManager.js';
 
 export class Controls {
     constructor(cubeState, cubeRenderer, onMoveCallback) {
@@ -144,10 +145,16 @@ export class Controls {
     }
 
     async executeMove(move) {
+        // Initialize sound on first interaction
+        soundManager.init();
+
         // Provide haptic feedback on mobile if available
         if (navigator.vibrate) {
             navigator.vibrate(10);
         }
+
+        // Play move sound
+        soundManager.playMoveSound();
 
         // Apply to state
         this.cubeState.applyMove(move);
@@ -174,6 +181,9 @@ export class Controls {
     }
 
     async scramble() {
+        // Initialize sound on first interaction
+        soundManager.init();
+
         // Provide haptic feedback
         if (navigator.vibrate) {
             navigator.vibrate([20, 50, 20]);
@@ -185,8 +195,9 @@ export class Controls {
         const scramble = this.cubeState.scramble(20);
         const moves = scramble.split(' ');
 
-        // Animate scramble faster
+        // Animate scramble faster with sound
         for (const move of moves) {
+            soundManager.playScrambleSound();
             await this.renderer.animateMove(move, 80);
         }
 
@@ -197,9 +208,15 @@ export class Controls {
     }
 
     reset() {
+        // Initialize sound on first interaction
+        soundManager.init();
+
         if (navigator.vibrate) {
             navigator.vibrate(15);
         }
+
+        // Play reset sound
+        soundManager.playResetSound();
 
         this.cubeState.reset();
         this.renderer.resetCube();
@@ -213,11 +230,17 @@ export class Controls {
     async undo() {
         if (this.userMoveHistory.length === 0) return;
 
+        // Initialize sound on first interaction
+        soundManager.init();
+
         const lastMove = this.userMoveHistory.pop();
 
         if (navigator.vibrate) {
             navigator.vibrate(10);
         }
+
+        // Play undo sound
+        soundManager.playUndoSound();
 
         // Apply inverse move to state
         const inverse = this.getInverseMove(lastMove);
@@ -235,11 +258,17 @@ export class Controls {
     async redo() {
         if (this.redoStack.length === 0) return;
 
+        // Initialize sound on first interaction
+        soundManager.init();
+
         const move = this.redoStack.pop();
 
         if (navigator.vibrate) {
             navigator.vibrate(10);
         }
+
+        // Play redo sound
+        soundManager.playRedoSound();
 
         // Apply move to state
         this.cubeState.applyMove(move);
@@ -293,6 +322,9 @@ export class Controls {
         if (navigator.vibrate) {
             navigator.vibrate([50, 100, 50, 100, 100]);
         }
+
+        // Play victory sound
+        soundManager.playSolvedSound();
     }
 }
 

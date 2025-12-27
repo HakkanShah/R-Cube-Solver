@@ -5,6 +5,7 @@ import { CubeRenderer } from './cube/CubeRenderer.js';
 import { Controls } from './ui/Controls.js';
 import { Tutorial } from './ui/Tutorial.js';
 import { Solver } from './solver/Solver.js';
+import soundManager from './audio/SoundManager.js';
 
 class RubiksCubeApp {
     constructor() {
@@ -42,6 +43,7 @@ class RubiksCubeApp {
 
         this.setupTabs();
         this.setupSolverPanel();
+        this.setupSoundToggle();
         this.updateViewportHint();
 
         // Scramble the cube on first load for a better first impression
@@ -92,6 +94,10 @@ class RubiksCubeApp {
     switchTab(tabName) {
         const previousTab = this.currentTab;
         this.currentTab = tabName;
+
+        // Play tab switch sound
+        soundManager.init();
+        soundManager.playTabSound();
 
         document.querySelectorAll('.nav-tab').forEach(tab => {
             tab.classList.toggle('active', tab.dataset.tab === tabName);
@@ -170,6 +176,10 @@ class RubiksCubeApp {
                 e.currentTarget.classList.add('active');
                 const color = e.currentTarget.dataset.color;
                 this.renderer.setSelectedColor(color);
+
+                // Play click sound for color selection
+                soundManager.init();
+                soundManager.playClickSound();
             });
         });
 
@@ -530,6 +540,14 @@ class RubiksCubeApp {
         if (navigator.vibrate && type === 'error') {
             navigator.vibrate([100, 50, 100]);
         }
+
+        // Play appropriate sound for toast type
+        soundManager.init();
+        if (type === 'error') {
+            soundManager.playErrorSound();
+        } else if (type === 'success') {
+            soundManager.playSolvedSound();
+        }
     }
 
     clearSolution() {
@@ -601,6 +619,10 @@ class RubiksCubeApp {
                     });
                 }
 
+                // Play move sound
+                soundManager.init();
+                soundManager.playMoveSound();
+
                 await this.renderer.animateMove(move, 300);
                 moveCounter++;
                 await this.delay(30);
@@ -612,6 +634,10 @@ class RubiksCubeApp {
 
         this.solutionIndex = this.currentSolution.length;
         this.updateSolverStatus('Solution complete! 🎉', 'ready');
+
+        // Play solved celebration sound
+        soundManager.init();
+        soundManager.playSolvedSound();
 
         // Mark all phases complete
         document.querySelectorAll('.phase-step').forEach(step => {
@@ -672,6 +698,10 @@ class RubiksCubeApp {
             totalMoves = phaseEnd;
         }
 
+        // Play move sound for step
+        soundManager.init();
+        soundManager.playMoveSound();
+
         await this.renderer.animateMove(move, 350);
 
         this.solutionIndex++;
@@ -685,6 +715,10 @@ class RubiksCubeApp {
                 step.classList.remove('active');
                 step.classList.add('complete');
             });
+
+            // Play solved celebration sound
+            soundManager.init();
+            soundManager.playSolvedSound();
         }
     }
 
@@ -716,6 +750,30 @@ class RubiksCubeApp {
 
     delay(ms) {
         return new Promise(resolve => setTimeout(resolve, ms));
+    }
+
+    setupSoundToggle() {
+        const soundBtn = document.getElementById('sound-btn');
+        if (!soundBtn) return;
+
+        // Initialize audio on first click
+        soundBtn.addEventListener('click', () => {
+            soundManager.init();
+            const enabled = soundManager.toggle();
+
+            // Update button visual state
+            if (enabled) {
+                soundBtn.classList.remove('muted');
+                soundManager.playClickSound();
+            } else {
+                soundBtn.classList.add('muted');
+            }
+        });
+
+        // Re-create Lucide icons after DOM update
+        if (typeof lucide !== 'undefined') {
+            setTimeout(() => lucide.createIcons(), 100);
+        }
     }
 }
 

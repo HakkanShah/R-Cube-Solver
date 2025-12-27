@@ -1,4 +1,5 @@
 // Tutorial.js - Step-by-step solving tutorial
+import soundManager from '../audio/SoundManager.js';
 
 export class Tutorial {
     constructor(cubeState, cubeRenderer) {
@@ -113,6 +114,8 @@ export class Tutorial {
     nextStep() {
         if (this.currentStep < this.totalSteps) {
             this.currentStep++;
+            soundManager.init();
+            soundManager.playStepSound();
             this.updateUI();
         }
     }
@@ -120,6 +123,8 @@ export class Tutorial {
     previousStep() {
         if (this.currentStep > 1) {
             this.currentStep--;
+            soundManager.init();
+            soundManager.playStepSound();
             this.updateUI();
         }
     }
@@ -190,6 +195,8 @@ export class Tutorial {
         // Play the demo moves
         const moves = step.demo.split(' ').filter(m => m);
         for (const move of moves) {
+            soundManager.init();
+            soundManager.playMoveSound();
             this.cubeState.applyMove(move, false);
             await this.renderer.animateMove(move, 400);
             await this.delay(100);

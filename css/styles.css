@@ -1833,3 +1833,166 @@ body::before {
     }
 }
 
+/* ============================================
+   SOUND TOGGLE & HELP BUTTONS
+   ============================================ */
+
+.sound-btn,
+.help-btn {
+    position: fixed;
+    width: 44px;
+    height: 44px;
+    border-radius: 50%;
+    border: 1px solid var(--bg-elevated);
+    background: var(--bg-card);
+    color: var(--text-secondary);
+    font-size: 1rem;
+    cursor: pointer;
+    transition: all 0.3s var(--ease-out);
+    z-index: 200;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+}
+
+/* Sound button - desktop neutral style */
+.sound-btn {
+    bottom: var(--space-5);
+    right: var(--space-5);
+    background: var(--bg-card);
+    border: 1px solid var(--bg-hover);
+    color: var(--text-primary);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+}
+
+.sound-btn:hover {
+    transform: scale(1.08);
+    background: var(--bg-elevated);
+    border-color: var(--accent);
+    color: var(--accent);
+    box-shadow: 0 6px 16px rgba(0, 0, 0, 0.25);
+}
+
+.sound-btn:active {
+    transform: scale(0.95);
+}
+
+/* Sound button - muted state (neutral) */
+.sound-btn.muted {
+    color: var(--text-muted);
+    opacity: 0.7;
+}
+
+.sound-btn.muted:hover {
+    opacity: 1;
+    color: var(--accent);
+}
+
+/* Sound button icons */
+.sound-icon {
+    width: 20px;
+    height: 20px;
+    transition: transform 0.2s ease;
+}
+
+.sound-btn:hover .sound-icon {
+    transform: scale(1.1);
+}
+
+.sound-btn.muted .sound-on {
+    display: none !important;
+}
+
+.sound-btn.muted .sound-off {
+    display: block !important;
+}
+
+.sound-btn:not(.muted) .sound-on {
+    display: block !important;
+}
+
+.sound-btn:not(.muted) .sound-off {
+    display: none !important;
+}
+
+/* Help button */
+.help-btn {
+    bottom: var(--space-5);
+    right: calc(var(--space-5) + 52px);
+    font-weight: 600;
+    font-family: var(--font-sans);
+}
+
+.help-btn:hover {
+    background: var(--bg-elevated);
+    color: var(--accent);
+    border-color: var(--accent);
+    transform: scale(1.05);
+}
+
+.help-btn:active {
+    transform: scale(0.95);
+}
+
+/* Desktop positioning */
+@media (min-width: 769px) {
+    .sound-btn {
+        bottom: var(--space-5);
+        right: var(--space-5);
+    }
+    
+    .help-btn {
+        bottom: var(--space-5);
+        right: calc(var(--space-5) + 52px);
+    }
+}
+
+/* Mobile - sound button in header (icon only), hide help button */
+@media (max-width: 768px) {
+    /* Hide keyboard shortcuts button on mobile */
+    .help-btn {
+        display: none !important;
+    }
+    
+    /* Position sound button in header area (top right) - icon only */
+    .sound-btn {
+        position: fixed;
+        top: var(--space-3);
+        right: var(--space-3);
+        bottom: auto;
+        width: 36px;
+        height: 36px;
+        z-index: 150;
+        /* Remove circle - transparent background */
+        background: transparent;
+        border: none;
+        box-shadow: none;
+        color: var(--text-secondary);
+    }
+    
+    .sound-btn:hover,
+    .sound-btn:active {
+        background: transparent;
+        border: none;
+        box-shadow: none;
+        transform: scale(1.15);
+        color: var(--accent);
+    }
+    
+    .sound-btn.muted {
+        color: var(--text-muted);
+        opacity: 0.6;
+    }
+    
+    .sound-btn.muted:hover {
+        opacity: 1;
+        color: var(--text-secondary);
+    }
+    
+    .sound-icon {
+        width: 22px;
+        height: 22px;
+    }
+}
+
