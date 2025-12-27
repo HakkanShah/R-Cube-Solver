@@ -340,6 +340,32 @@ class SoundManager {
         });
     }
 
+    // ===== WARNING SOUND =====
+    // Gentle notification sound for warnings
+    playWarningSound() {
+        if (!this.enabled || !this.audioContext) return;
+        this.resume();
+
+        const now = this.audioContext.currentTime;
+
+        // Single gentle tone with slight wobble
+        const osc = this.audioContext.createOscillator();
+        osc.type = 'triangle';
+        osc.frequency.setValueAtTime(500, now);
+        osc.frequency.setValueAtTime(550, now + 0.1);
+        osc.frequency.setValueAtTime(500, now + 0.2);
+
+        const gain = this.createGain(0.15);
+        gain.gain.setValueAtTime(0, now);
+        gain.gain.linearRampToValueAtTime(0.15 * this.volume, now + 0.03);
+        gain.gain.setValueAtTime(0.15 * this.volume, now + 0.15);
+        gain.gain.exponentialRampToValueAtTime(0.001, now + 0.3);
+
+        osc.connect(gain);
+        osc.start(now);
+        osc.stop(now + 0.3);
+    }
+
     // ===== STEP/TUTORIAL SOUND =====
     // Soft notification for tutorial steps
     playStepSound() {

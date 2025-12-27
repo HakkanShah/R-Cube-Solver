@@ -547,6 +547,8 @@ class RubiksCubeApp {
             soundManager.playErrorSound();
         } else if (type === 'success') {
             soundManager.playSolvedSound();
+        } else if (type === 'warning') {
+            soundManager.playWarningSound();
         }
     }
 
