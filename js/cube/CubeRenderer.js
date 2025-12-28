@@ -90,6 +90,7 @@ export class CubeRenderer {
         window.addEventListener('resize', () => this.onResize());
         this.renderer.domElement.addEventListener('click', (e) => this.onClick(e));
         this.renderer.domElement.addEventListener('touchend', (e) => this.onTouch(e));
+        this.renderer.domElement.addEventListener('mousemove', (e) => this.onMouseMove(e));
         this.animate();
     }
 
@@ -174,16 +175,51 @@ export class CubeRenderer {
         this.paintMode = true;
         this.selectedColor = color;
         this.onPaintCallback = callback;
-        this.container.style.cursor = 'crosshair';
+        // Default to grab cursor, will change to paintbrush when over cube
+        this.container.style.cursor = 'grab';
+        this.container.classList.add('paint-mode');
     }
 
     disablePaintMode() {
         this.paintMode = false;
         this.container.style.cursor = 'grab';
+        this.container.classList.remove('paint-mode');
     }
 
     setSelectedColor(color) {
         this.selectedColor = color;
+    }
+
+    onMouseMove(event) {
+        if (!this.paintMode) return;
+
+        const rect = this.renderer.domElement.getBoundingClientRect();
+        this.mouse.x = ((event.clientX - rect.left) / rect.width) * 2 - 1;
+        this.mouse.y = -((event.clientY - rect.top) / rect.height) * 2 + 1;
+
+        // Check if hovering over a cube sticker
+        this.raycaster.setFromCamera(this.mouse, this.camera);
+        const intersects = this.raycaster.intersectObjects(this.cubies);
+
+        if (intersects.length > 0) {
+            // Check if this is actually an external face (paintable)
+            const intersect = intersects[0];
+            const cubie = intersect.object;
+            const faceIndex = intersect.faceIndex;
+            const materialIndex = Math.floor(faceIndex / 2);
+            const { faceName } = this.getFaceAndIndex(cubie, materialIndex);
+
+            if (faceName) {
+                // Over a paintable sticker - use custom paintbrush cursor
+                this.container.style.cursor = 'url("data:image/svg+xml,%3Csvg xmlns=\'http://www.w3.org/2000/svg\' width=\'24\' height=\'24\' viewBox=\'0 0 24 24\' fill=\'none\' stroke=\'%23e8a54b\' stroke-width=\'2\' stroke-linecap=\'round\' stroke-linejoin=\'round\'%3E%3Cpath d=\'M18.37 2.63L14 7l-1.59-1.59a2 2 0 0 0-2.82 0L8 7l9 9 1.59-1.59a2 2 0 0 0 0-2.82L17 10l4.37-4.37a2.12 2.12 0 1 0-3-3z\'/%3E%3Cpath d=\'M9 8c-2 3-4 3.5-7 4l8 10c2-1 6-5 6-7\'/%3E%3Cpath d=\'M14.5 17.5 4.5 15\'/%3E%3C/svg%3E") 2 22, crosshair';
+            } else {
+                // Internal face, not paintable
+                this.container.style.cursor = 'grab';
+            }
+        } else {
+            // Not over cube - use grab cursor
+            this.container.style.cursor = 'grab';
+        }
     }
 
     onClick(event) {
