@@ -32,7 +32,7 @@ export class CubeRenderer {
             'B': 0x0051ba,  // Deep royal blue
             'G': 0x009b48,  // Classic Rubik's green
             'X': 0x1a1a1a,  // Internal (dark)
-            'U': 0x0a0a0a   // Unpainted (black)
+            'U': 0x2a2a2a   // Unpainted (visible dark gray)
         };
 
         // Face normals
