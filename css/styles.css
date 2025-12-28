@@ -132,8 +132,8 @@ body::before {
 }
 
 .logo-icon .icon {
-    width: 24px;
-    height: 24px;
+    width: 32px;
+    height: 32px;
     color: var(--accent);
 }
 
@@ -2132,6 +2132,49 @@ body::before {
     .sound-icon {
         width: 22px;
         height: 22px;
+    }
+}
+
+/* ============================================
+   HEADER CREDIT
+   ============================================ */
+
+.logo-text {
+    display: flex;
+    flex-direction: column;
+    gap: 0;
+}
+
+.logo-text h1 {
+    font-size: 1rem;
+    font-weight: 600;
+    letter-spacing: -0.02em;
+    line-height: 1.2;
+}
+
+.credit {
+    font-size: 0.65rem;
+    color: var(--text-muted);
+    font-weight: 400;
+    letter-spacing: 0.01em;
+}
+
+.credit a {
+    color: var(--accent);
+    text-decoration: none;
+    font-weight: 500;
+    transition: all 0.2s ease;
+}
+
+.credit a:hover {
+    color: var(--text-primary);
+    text-decoration: underline;
+}
+
+/* Hide credit on very small screens to save space */
+@media (max-width: 360px) {
+    .credit {
+        display: none;
     }
 }
 
