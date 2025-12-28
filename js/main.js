@@ -21,6 +21,11 @@ class RubiksCubeApp {
         this.paintHistory = [];
         this.currentPhaseIndex = 0;
 
+        // Session state preservation (resets on page refresh only)
+        this.savedPlayState = null;      // Saved cube state for Play mode
+        this.savedSolverPaintState = null; // Saved paint state for Solver mode
+        this.solverHasBeenVisited = false; // Track if solver tab was ever visited
+
         this.init();
     }
 
@@ -44,12 +49,31 @@ class RubiksCubeApp {
         this.setupTabs();
         this.setupSolverPanel();
         this.setupSoundToggle();
+        this.setupBeforeUnloadWarning();
         this.updateViewportHint();
 
         // Scramble the cube on first load for a better first impression
         this.initialScramble();
 
         console.log('Rubik\'s Cube Solver Ready!');
+    }
+
+    // Warn user before page refresh/close to prevent accidental loss of progress
+    setupBeforeUnloadWarning() {
+        window.addEventListener('beforeunload', (event) => {
+            // Check if there's any progress worth saving
+            const hasPlayProgress = this.savedPlayState !== null ||
+                (this.controls && this.controls.userMoveHistory && this.controls.userMoveHistory.length > 0);
+            const hasSolverProgress = this.savedSolverPaintState !== null || this.solverHasBeenVisited;
+
+            if (hasPlayProgress || hasSolverProgress) {
+                // Standard way to trigger browser's confirmation dialog
+                event.preventDefault();
+                // For older browsers
+                event.returnValue = 'You have unsaved changes. Are you sure you want to leave?';
+                return event.returnValue;
+            }
+        });
     }
 
     async initialScramble() {
@@ -117,27 +141,106 @@ class RubiksCubeApp {
             this.renderer.onResize();
         }, 50);
 
+        // Save state from previous tab before switching
+        if (previousTab === 'play' || previousTab === 'tutorial') {
+            // Save play/learn cube state
+            this.savedPlayState = this.cubeState.getState();
+        } else if (previousTab === 'solver') {
+            // Save solver paint state  
+            this.savedSolverPaintState = this.renderer.getPaintState();
+        }
+
         if (tabName === 'solver') {
-            this.renderer.resetCube(true);
+            // Switching TO solver
+            if (this.savedSolverPaintState && this.solverHasBeenVisited) {
+                // Restore saved paint state
+                this.renderer.resetCube(true);
+                this.restorePaintState(this.savedSolverPaintState);
+            } else {
+                // First time visiting solver - start fresh
+                this.renderer.resetCube(true);
+                this.solverHasBeenVisited = true;
+            }
             this.renderer.enablePaintMode(this.getSelectedColor(), (face, idx, color, error) => {
                 this.onPaintSticker(face, idx, color, error);
             });
-            this.paintHistory = [];
             this.updateColorCounts();
             this.updateSolverStatus('Click stickers on the cube to paint your current state', 'painting');
             this.resetPhaseIndicators();
         } else {
+            // Switching to Play or Learn
             this.renderer.disablePaintMode();
-            if (previousTab === 'solver') {
-                this.cubeState.reset();
+
+            if (this.savedPlayState) {
+                // Restore saved play state
+                this.cubeState.setState(this.savedPlayState);
                 this.renderer.resetCube(false);
+                this.renderer.syncWithState(this.cubeState);
             } else {
-                // Reset camera for consistent positioning even when not resetting cube
+                // No saved state, reset camera only
                 this.renderer.resetCamera();
             }
         }
 
         this.updateViewportHint();
+    }
+
+    // Restore a saved paint state to the renderer
+    restorePaintState(paintState) {
+        if (!paintState) return;
+
+        // Apply each sticker color from saved state
+        for (const [face, colors] of Object.entries(paintState)) {
+            for (let idx = 0; idx < colors.length; idx++) {
+                const color = colors[idx];
+                if (color !== 'U') { // Only restore painted stickers
+                    this.renderer.paintState[face][idx] = color;
+                }
+            }
+        }
+
+        // Update visual appearance
+        this.renderer.cubies.forEach(cubie => {
+            const { x, y, z } = cubie.userData;
+
+            // Update each visible face
+            if (x === 1) {
+                const idx = this.renderer.getStickerIndex('R', y, z);
+                if (idx !== -1) {
+                    cubie.material[0].color.setHex(this.renderer.colors[this.renderer.paintState.R[idx]]);
+                }
+            }
+            if (x === -1) {
+                const idx = this.renderer.getStickerIndex('L', y, z);
+                if (idx !== -1) {
+                    cubie.material[1].color.setHex(this.renderer.colors[this.renderer.paintState.L[idx]]);
+                }
+            }
+            if (y === 1) {
+                const idx = this.renderer.getStickerIndex('U', x, z);
+                if (idx !== -1) {
+                    cubie.material[2].color.setHex(this.renderer.colors[this.renderer.paintState.U[idx]]);
+                }
+            }
+            if (y === -1) {
+                const idx = this.renderer.getStickerIndex('D', x, z);
+                if (idx !== -1) {
+                    cubie.material[3].color.setHex(this.renderer.colors[this.renderer.paintState.D[idx]]);
+                }
+            }
+            if (z === 1) {
+                const idx = this.renderer.getStickerIndex('F', x, y);
+                if (idx !== -1) {
+                    cubie.material[4].color.setHex(this.renderer.colors[this.renderer.paintState.F[idx]]);
+                }
+            }
+            if (z === -1) {
+                const idx = this.renderer.getStickerIndex('B', x, y);
+                if (idx !== -1) {
+                    cubie.material[5].color.setHex(this.renderer.colors[this.renderer.paintState.B[idx]]);
+                }
+            }
+        });
     }
 
     getSelectedColor() {
