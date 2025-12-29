@@ -213,9 +213,10 @@ export class Solver {
     }
 
     findCorner(colors) {
+        // Order must match this.corners definitions: [U/D face, side1, side2]
         const stdCorners = [
             ['U', 'R', 'F'], ['U', 'F', 'L'], ['U', 'L', 'B'], ['U', 'B', 'R'],
-            ['D', 'F', 'R'], ['D', 'L', 'F'], ['D', 'B', 'L'], ['D', 'R', 'B']
+            ['D', 'R', 'F'], ['D', 'F', 'L'], ['D', 'L', 'B'], ['D', 'B', 'R']
         ];
 
         for (let i = 0; i < 8; i++) {
