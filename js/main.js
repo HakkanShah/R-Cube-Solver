@@ -518,8 +518,9 @@ class RubiksCubeApp {
         tempCube.setState(paintState);
 
         // Basic validation
-        if (!tempCube.isValid()) {
-            this.showSolutionError('Invalid cube state. Each color must appear exactly 9 times.');
+        const validation = tempCube.getValidationErrors();
+        if (!validation.valid) {
+            this.showSolutionError(validation.errors[0] || 'Invalid cube state.');
             return;
         }
 
@@ -528,33 +529,48 @@ class RubiksCubeApp {
             return;
         }
 
+        // Show loading overlay
+        const loadingOverlay = document.getElementById('loading-overlay');
+        if (loadingOverlay) loadingOverlay.classList.add('active');
+
         this.updateSolverStatus('Calculating solution...', 'solving');
-        await this.delay(100);
 
-        // Get paint state and solve
-        const result = this.solver.solve(paintState);
+        // Allow UI to render loader
+        await this.delay(50);
 
-        if (!result.success) {
-            this.showSolutionError(result.error || 'Could not find solution.');
-            this.updateSolverStatus('Solve failed - check cube state', 'painting');
-            return;
+        try {
+            // Get paint state and solve
+            const result = this.solver.solve(paintState);
+
+            if (loadingOverlay) loadingOverlay.classList.remove('active');
+
+            if (!result.success) {
+                this.showSolutionError(result.error || 'Could not find solution.');
+                this.updateSolverStatus('Solve failed - check cube state', 'painting');
+                return;
+            }
+
+            if (result.solution.length === 0) {
+                this.showSolution(['Already solved! 🎉'], []);
+                return;
+            }
+
+            this.currentSolution = result.solution;
+            this.currentPhases = result.phases || [];
+            this.solutionIndex = 0;
+            this.currentPhaseIndex = 0;
+
+            this.showSolution(result.solution, result.phases);
+            this.updateSolverStatus(`Solution found: ${result.solution.length} moves`, 'ready');
+
+            // Activate first phase
+            this.updatePhaseIndicator(0, 'active');
+
+        } catch (e) {
+            console.error(e);
+            if (loadingOverlay) loadingOverlay.classList.remove('active');
+            this.showSolutionError('An unexpected error occurred.');
         }
-
-        if (result.solution.length === 0) {
-            this.showSolution(['Already solved! 🎉'], []);
-            return;
-        }
-
-        this.currentSolution = result.solution;
-        this.currentPhases = result.phases || [];
-        this.solutionIndex = 0;
-        this.currentPhaseIndex = 0;
-
-        this.showSolution(result.solution, result.phases);
-        this.updateSolverStatus(`Solution found: ${result.solution.length} moves`, 'ready');
-
-        // Activate first phase
-        this.updatePhaseIndicator(0, 'active');
     }
 
     showSolution(moves, phases = []) {

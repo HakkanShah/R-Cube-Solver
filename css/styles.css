@@ -2178,3 +2178,86 @@ body::before {
     }
 }
 
+
+/* ============================================
+   LOADING OVERLAY
+   ============================================ */
+
+.loading-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(15, 14, 13, 0.85);
+    backdrop-filter: blur(8px);
+    z-index: 1000;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.3s var(--ease-out);
+}
+
+.loading-overlay.active {
+    opacity: 1;
+    pointer-events: auto;
+}
+
+.loader-content {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: var(--space-5);
+}
+
+.loader-text {
+    text-align: center;
+    animation: fadeInUp 0.5s var(--ease-out);
+}
+
+.loader-text h3 {
+    font-size: 1.5rem;
+    font-weight: 600;
+    color: var(--text-primary);
+    margin-bottom: var(--space-1);
+    letter-spacing: -0.02em;
+}
+
+.loader-text p {
+    font-size: 0.9rem;
+    color: var(--text-secondary);
+}
+
+/* 3D Cube Loader Animation */
+.rubiks-loader {
+    width: 60px;
+    height: 60px;
+    position: relative;
+    transform-style: preserve-3d;
+    animation: rotateCube 2s infinite linear;
+}
+
+.cube-face {
+    position: absolute;
+    width: 60px;
+    height: 60px;
+    border: 3px solid #1a1a1a;
+    box-shadow: inset 0 0 15px rgba(0,0,0,0.5);
+    opacity: 0.9;
+}
+
+.face-u { transform: rotateX(90deg) translateZ(30px); background: var(--face-white); }
+.face-d { transform: rotateX(-90deg) translateZ(30px); background: var(--face-yellow); }
+.face-f { transform: translateZ(30px); background: var(--face-green); }
+.face-b { transform: rotateY(180deg) translateZ(30px); background: var(--face-blue); }
+.face-r { transform: rotateY(90deg) translateZ(30px); background: var(--face-red); }
+.face-l { transform: rotateY(-90deg) translateZ(30px); background: var(--face-orange); }
+
+@keyframes rotateCube {
+    0% { transform: rotateX(0deg) rotateY(0deg); }
+    100% { transform: rotateX(360deg) rotateY(360deg); }
+}
+
+@keyframes fadeInUp {
+    from { opacity: 0; transform: translateY(10px); }
+    to { opacity: 1; transform: translateY(0); }
+}

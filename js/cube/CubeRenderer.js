@@ -299,7 +299,7 @@ export class CubeRenderer {
             return { valid: false, reason: `Already have 9 ${this.getColorName(color)} stickers!` };
         }
 
-        // Rule 3: Centers must be unique colors
+        // Rule 2: Centers must be unique colors
         if (currentIdx === 4) { // Center piece
             for (const [fName, faceColors] of Object.entries(this.paintState)) {
                 if (fName === currentFace) continue;
@@ -309,28 +309,17 @@ export class CubeRenderer {
             }
         }
 
-
-        // Rule 2: Same cubie can't have same color on different visible faces
-        // Check all 6 material indices for this cubie
+        // Rule 3: Same cubie can't have same color on different visible faces
         const visibleFaces = [];
-
-        // Material 0 = +X (R face) - visible if x === 1
         if (x === 1) visibleFaces.push({ matIdx: 0, face: 'R' });
-        // Material 1 = -X (L face) - visible if x === -1
         if (x === -1) visibleFaces.push({ matIdx: 1, face: 'L' });
-        // Material 2 = +Y (U face) - visible if y === 1
         if (y === 1) visibleFaces.push({ matIdx: 2, face: 'U' });
-        // Material 3 = -Y (D face) - visible if y === -1
         if (y === -1) visibleFaces.push({ matIdx: 3, face: 'D' });
-        // Material 4 = +Z (F face) - visible if z === 1
         if (z === 1) visibleFaces.push({ matIdx: 4, face: 'F' });
-        // Material 5 = -Z (B face) - visible if z === -1
         if (z === -1) visibleFaces.push({ matIdx: 5, face: 'B' });
 
-        // Check other faces of this cubie for same color
         for (const { matIdx, face } of visibleFaces) {
-            if (matIdx === paintingMaterialIndex) continue; // Skip the face we're painting
-
+            if (matIdx === paintingMaterialIndex) continue;
             const { stickerIndex } = this.getFaceAndIndex(cubie, matIdx);
             if (stickerIndex !== -1) {
                 const existingColor = this.paintState[face][stickerIndex];
@@ -340,7 +329,80 @@ export class CubeRenderer {
             }
         }
 
+        // Rule 4: Edge/Corner Count Validation (Max 4 per color per type)
+        // Determine piece type
+        const coordSum = Math.abs(x) + Math.abs(y) + Math.abs(z);
+        const isCorner = coordSum === 3;
+        const isEdge = coordSum === 2;
+
+        if (isCorner || isEdge) {
+            let typeCount = 0;
+            const targetType = isCorner ? 3 : 2;
+
+            // Iterate all cubies to count how many of THIS type (Corner/Edge) conform to the target color
+            // Note: We need to see if a piece *contains* the color. 
+            // Paint logic: "Can I paint this sticker [color]?" -> implies this piece *will* contain [color].
+            // If it already had [color] (checked above), it's fine.
+            // If it didn't, we check if adding it exceeds limit.
+
+            // Limit is 4 pieces of that color.
+            // Check how many OTHER pieces of this type already have this color.
+
+            for (const c of this.cubies) {
+                if (c === cubie) continue; // Skip self (we are modifying self)
+
+                const cSum = Math.abs(c.userData.x) + Math.abs(c.userData.y) + Math.abs(c.userData.z);
+                if (cSum !== targetType) continue; // Only check same type (Edge vs Corner)
+
+                // Check if this other piece has the target color
+                let hasColor = false;
+                const cFaces = this.getVisibleFaceColors(c);
+                if (cFaces.includes(color)) hasColor = true;
+
+                if (hasColor) typeCount++;
+            }
+
+            if (typeCount >= 4) {
+                const typeName = isCorner ? "corners" : "edges";
+                return { valid: false, reason: `Max 4 ${typeName} can have ${this.getColorName(color)}!` };
+            }
+        }
+
         return { valid: true };
+    }
+
+    getVisibleFaceColors(cubie) {
+        const colors = [];
+        const { x, y, z } = cubie.userData;
+
+        const checkFace = (face, check) => {
+            if (check) {
+                const { stickerIndex } = this.getFaceAndIndex(cubie, this.getMatIndexForFace(face));
+                if (stickerIndex !== -1) {
+                    colors.push(this.paintState[face][stickerIndex]);
+                }
+            }
+        };
+
+        checkFace('R', x === 1);
+        checkFace('L', x === -1);
+        checkFace('U', y === 1);
+        checkFace('D', y === -1);
+        checkFace('F', z === 1);
+        checkFace('B', z === -1);
+        return colors;
+    }
+
+    getMatIndexForFace(face) {
+        switch (face) {
+            case 'R': return 0;
+            case 'L': return 1;
+            case 'U': return 2;
+            case 'D': return 3;
+            case 'F': return 4;
+            case 'B': return 5;
+        }
+        return -1;
     }
 
     getColorCounts() {

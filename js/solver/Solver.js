@@ -1,10 +1,13 @@
-// Solver.js - Enhanced Rubik's Cube Solver with CFOP-based Layer-by-Layer Method
-// Improved algorithms with phase tracking for better solutions
+// Solver.js - Enhanced Rubik's Cube Solver with Kociemba Two-Phase Algorithm and Fallback
+import { KociembaSolver } from './KociembaSolver.js';
 
 export class Solver {
     constructor() {
+        this.kociemba = new KociembaSolver();
+
         // Corner and edge definitions (facelet indices)
         // Facelets indexed 0-53: U(0-8), R(9-17), F(18-26), D(27-35), L(36-44), B(45-53)
+        // ... (Existing definitions) ...
 
         // Correct corner definitions based on standard cube orientation
         this.corners = [
@@ -58,22 +61,30 @@ export class Solver {
             // STEP 4: Convert painted colors to facelet string
             const facelets = this.toFaceletString(paintState, colorToFace);
 
-            // STEP 5: Convert facelets to Cubies (Corner/Edge pieces)
+            // STEP 5: Kociemba Solve is DISABLED
+            // The Kociemba algorithm requires async processing (Web Workers) to avoid
+            // freezing the UI during its expensive table generation and IDA* search.
+            // For now, we use the reliable Layer-by-Layer method.
+            console.log("Using Layer-By-Layer solver (Kociemba disabled for stability).");
+
+            // Fallback to Layer-by-Layer Logic
+
+            // Convert facelets to Cubies (Corner/Edge pieces) for standard solver
             const cubies = this.faceletsToCubies(facelets);
             if (cubies.error) {
                 return { success: false, solution: [], phases: [], error: cubies.error };
             }
 
-            // STEP 6: Validate Global Invariants (Parity, Orientation)
+            // Validate Global Invariants (Parity, Orientation)
             const invariantCheck = this.validateInvariants(cubies);
             if (!invariantCheck.valid) {
                 return { success: false, solution: [], phases: [], error: invariantCheck.error };
             }
 
-            // STEP 7: Solve using improved layer-by-layer
+            // Solve using improved layer-by-layer
             const result = this.solveCube(facelets);
 
-            // STEP 8: Optimize moves
+            // Optimize moves
             const optimized = this.optimizeMoves(result.solution);
 
             return {
