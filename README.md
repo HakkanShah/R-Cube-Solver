@@ -1,4 +1,4 @@
-# 🧩 Rubik's Cube Solver  
+# 🧩 Rubik's Cube Solver
 <img src="images/cube.png" alt="The Cube" width="50%" height="50%">
 
 An interactive 3D Rubik's Cube application with solving capabilities, step-by-step tutorials, and a beautiful modern UI. Built with vanilla JavaScript and Three.js.
